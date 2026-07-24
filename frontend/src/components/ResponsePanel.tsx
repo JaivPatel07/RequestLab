@@ -40,8 +40,8 @@ export const ResponsePanel: React.FC = () => {
   const statusColor = isSuccess
     ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5'
     : isClientError
-    ? 'text-amber-400 border-amber-500/20 bg-amber-500/5'
-    : 'text-rose-400 border-rose-500/20 bg-rose-500/5';
+      ? 'text-amber-400 border-amber-500/20 bg-amber-500/5'
+      : 'text-rose-400 border-rose-500/20 bg-rose-500/5';
 
   const formatSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
@@ -71,7 +71,7 @@ export const ResponsePanel: React.FC = () => {
         if (Array.isArray(parsed)) {
           rawBody = parsed.map(p => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`).join('&');
         }
-      } catch (e) {}
+      } catch (e) { }
     } else if (activeTab.bodyContent) {
       rawBody = activeTab.bodyContent;
     }
@@ -143,7 +143,7 @@ export const ResponsePanel: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col bg-[#0d0d11]/95 border-l border-slate-900 overflow-hidden select-none">
-      
+
       {/* Response Status / Metrics Header */}
       <div className="p-4 border-b border-slate-900 bg-slate-950/20 flex items-center justify-between shrink-0 text-xs">
         <div className="flex items-center gap-3">
@@ -166,11 +166,10 @@ export const ResponsePanel: React.FC = () => {
           <button
             key={sub.id}
             onClick={() => setActiveSubTab(sub.id as any)}
-            className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-              activeSubTab === sub.id
+            className={`px-4 py-2 font-medium border-b-2 transition-colors ${activeSubTab === sub.id
                 ? 'border-indigo-500 text-indigo-400 font-semibold'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
+              }`}
           >
             {sub.label}
           </button>
@@ -186,25 +185,22 @@ export const ResponsePanel: React.FC = () => {
             <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={() => setBodyMode('pretty')}
-                className={`px-2.5 py-1 text-[10px] font-bold rounded-md flex items-center gap-1 transition-all ${
-                  bodyMode === 'pretty' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-slate-900/50 text-slate-500 hover:text-slate-350'
-                }`}
+                className={`px-2.5 py-1 text-[10px] font-bold rounded-md flex items-center gap-1 transition-all ${bodyMode === 'pretty' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-slate-900/50 text-slate-500 hover:text-slate-350'
+                  }`}
               >
                 <FileText size={12} /> Pretty
               </button>
               <button
                 onClick={() => setBodyMode('raw')}
-                className={`px-2.5 py-1 text-[10px] font-bold rounded-md flex items-center gap-1 transition-all ${
-                  bodyMode === 'raw' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-slate-900/50 text-slate-500 hover:text-slate-350'
-                }`}
+                className={`px-2.5 py-1 text-[10px] font-bold rounded-md flex items-center gap-1 transition-all ${bodyMode === 'raw' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-slate-900/50 text-slate-500 hover:text-slate-350'
+                  }`}
               >
                 <Code size={12} /> Raw
               </button>
               <button
                 onClick={() => setBodyMode('preview')}
-                className={`px-2.5 py-1 text-[10px] font-bold rounded-md flex items-center gap-1 transition-all ${
-                  bodyMode === 'preview' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-slate-900/50 text-slate-500 hover:text-slate-350'
-                }`}
+                className={`px-2.5 py-1 text-[10px] font-bold rounded-md flex items-center gap-1 transition-all ${bodyMode === 'preview' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-slate-900/50 text-slate-500 hover:text-slate-350'
+                  }`}
               >
                 <Eye size={12} /> Preview
               </button>
@@ -226,7 +222,6 @@ export const ResponsePanel: React.FC = () => {
                     scrollBeyondLastLine: false,
                     automaticLayout: true,
                     lineNumbers: 'on',
-                    backgroundColor: '#0c0c0f'
                   }}
                 />
               </div>
@@ -332,7 +327,6 @@ export const ResponsePanel: React.FC = () => {
                   scrollBeyondLastLine: false,
                   automaticLayout: true,
                   lineNumbers: 'on',
-                  backgroundColor: '#0c0c0f'
                 }}
               />
             </div>
