@@ -1,0 +1,63 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Collection {
+  id          String       @id @default(uuid())
+  name        String
+  isFavorite  Boolean      @default(false)
+  parentId    String?
+  parent      Collection?  @relation("SubCollections", fields: [parentId], references: [id], onDelete: Cascade)
+  children    Collection[] @relation("SubCollections")
+  requests    Request[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Request {
+  id           String     @id @default(uuid())
+  name         String
+  method       String
+  url          String
+  headers      String     // JSON array of {key, value, enabled}
+  params       String     // JSON array of {key, value, enabled}
+  authType     String     // none, bearer, basic, apikey
+  authConfig   String     // JSON string of auth configurations
+  bodyType     String     // none, json, formdata, urlencoded, text, xml
+  bodyContent  String?
+  cookies      String?    // JSON array of {key, value, enabled}
+  settings     String?    // JSON string for timeout, etc.
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  order        Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Environment {
+  id        String   @id @default(uuid())
+  name      String
+  isGlobal  Boolean  @default(false)
+  variables String   // JSON array of {key, value, enabled}
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model HistoryItem {
+  id              String   @id @default(uuid())
+  method          String
+  url             String
+  status          Int
+  statusText      String
+  duration        Int
+  responseSize    Int
+  responseBody    String?
+  responseHeaders String?  // JSON string of response headers
+  cookies         String?  // JSON string of cookies
+  createdAt       DateTime @default(now())
+}
