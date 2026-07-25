@@ -233,11 +233,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenEnvironm
       c.subFolders.length > 0
     );
 
-  const filteredHistory = history.filter(h =>
-    h.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    h.method.toLowerCase().includes(searchQuery.toLowerCase()) &&
-    (!showFavoriteHistory || h.isFavorite)
-  );
+  const filteredHistory = history.filter(h => {
+    const queryMatches =
+      h.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      h.method.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const favoriteMatches = !showFavoriteHistory || Boolean((h as { isFavorite?: boolean }).isFavorite);
+
+    return queryMatches && favoriteMatches;
+  });
 
   const groupedHistory = filteredHistory.reduce((acc, item) => {
     const itemDate = new Date(item.createdAt);
@@ -834,12 +838,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenEnvironm
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  updateHistoryItem(item.id, { isFavorite: !item.isFavorite });
+                                  updateHistoryItem(item.id, { isFavorite: !(item as any).isFavorite } as any);
                                 }}
                                 className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-500 hover:text-amber-400 transition-opacity"
                                 title="Favorite"
                               >
-                                <Star size={11} className={item.isFavorite ? 'fill-amber-400 text-amber-400' : ''} />
+                                <Star size={11} className={(item as any).isFavorite ? 'fill-amber-400 text-amber-400' : ''} />
                               </button>
                               <button
                                 onClick={(e) => {

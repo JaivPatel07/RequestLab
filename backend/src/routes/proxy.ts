@@ -269,8 +269,8 @@ proxyRouter.post('/send', async (req: Request, res: Response) => {
         duration,
         responseSize,
         responseBody: typeof responseBody === 'string' ? responseBody : JSON.stringify(responseBody),
-        responseHeaders: JSON.stringify(response.headers),
-        cookies: JSON.stringify(setCookieHeaders)
+        responseHeaders: JSON.stringify(response.headers)
+        // cookies are part of response headers (`set-cookie`)
       }
     });
 
@@ -302,8 +302,7 @@ proxyRouter.post('/send', async (req: Request, res: Response) => {
         duration,
         responseSize: Buffer.byteLength(errorMessage),
         responseBody: errorMessage,
-        responseHeaders: JSON.stringify({}),
-        cookies: JSON.stringify([])
+        responseHeaders: JSON.stringify({})
       }
     });
 
