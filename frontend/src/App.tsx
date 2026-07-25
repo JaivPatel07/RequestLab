@@ -10,6 +10,8 @@ import { EnvironmentModal } from './components/EnvironmentModal';
 import { CommandPalette } from './components/CommandPalette';
 import { CollectionRunnerModal } from './components/CollectionRunnerModal';
 import { DocsModal } from './components/DocsModal';
+import { FloatingNav } from './components/FloatingNav';
+import { Footer } from './components/Footer';
 
 const App: React.FC = () => {
   const {
@@ -91,45 +93,43 @@ const App: React.FC = () => {
 
   return (
     <div className="h-screen w-screen bg-[#070709] text-slate-100 flex flex-col font-sans overflow-hidden">
-      <div className="flex-1 min-h-0">
-        <PanelGroup direction="horizontal" className="h-full w-full">
-          {/* Left panel: Sidebar */}
-          <Panel defaultSize={20} minSize={15} maxSize={35}>
-            <Sidebar
+      <PanelGroup direction="horizontal" className="h-full w-full">
+        {/* Left panel: Sidebar */}
+        <Panel defaultSize={20} minSize={15} maxSize={35}>
+          <Sidebar
+            onOpenSettings={() => setIsSettingsOpen(true)}
+            onOpenEnvironments={() => setIsEnvironmentsOpen(true)}
+            onOpenDocs={() => setIsDocsOpen(true)}
+          />
+        </Panel>
+
+        <PanelResizeHandle className="w-1 bg-[#121217] hover:bg-indigo-500 cursor-col-resize transition-all" />
+
+        {/* Right side: Editor + Response OR Dashboard */}
+        <Panel defaultSize={80}>
+          {tabs.length === 0 ? (
+            <Dashboard
               onOpenSettings={() => setIsSettingsOpen(true)}
-              onOpenEnvironments={() => setIsEnvironmentsOpen(true)}
+              onCreateCollection={handleCreateCollectionFromDashboard}
               onOpenDocs={() => setIsDocsOpen(true)}
             />
-          </Panel>
+          ) : (
+            <PanelGroup direction="horizontal" className="h-full w-full">
+              {/* Request Panel */}
+              <Panel defaultSize={50} minSize={30}>
+                <Workspace />
+              </Panel>
 
-          <PanelResizeHandle className="w-1 bg-[#121217] hover:bg-indigo-500 cursor-col-resize transition-all" />
+              <PanelResizeHandle className="w-1 bg-[#121217] hover:bg-indigo-500 cursor-col-resize transition-all" />
 
-          {/* Right side: Editor + Response OR Dashboard */}
-          <Panel defaultSize={80}>
-            {tabs.length === 0 ? (
-              <Dashboard
-                onOpenSettings={() => setIsSettingsOpen(true)}
-                onCreateCollection={handleCreateCollectionFromDashboard}
-                onOpenDocs={() => setIsDocsOpen(true)}
-              />
-            ) : (
-              <PanelGroup direction="horizontal" className="h-full w-full">
-                {/* Request Panel */}
-                <Panel defaultSize={50} minSize={30}>
-                  <Workspace />
-                </Panel>
-
-                <PanelResizeHandle className="w-1 bg-[#121217] hover:bg-indigo-500 cursor-col-resize transition-all" />
-
-                {/* Response Panel */}
-                <Panel defaultSize={50} minSize={30}>
-                  <ResponsePanel />
-                </Panel>
-              </PanelGroup>
-            )}
-          </Panel>
-        </PanelGroup>
-      </div>
+              {/* Response Panel */}
+              <Panel defaultSize={50} minSize={30}>
+                <ResponsePanel />
+              </Panel>
+            </PanelGroup>
+          )}
+        </Panel>
+      </PanelGroup>
 
       {/* Modals & Dialogs */}
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
@@ -148,11 +148,12 @@ const App: React.FC = () => {
           await handleCreateCollectionFromDashboard();
         }}
       />
-
-      {/* Ad Banner Area */}
-      <div className="h-[90px] bg-slate-950/50 border-t border-slate-800 flex items-center justify-center shrink-0">
-        <span className="text-slate-700 text-sm font-medium">Advertisement Area</span>
-      </div>
+      <FloatingNav
+        onOpenDocs={() => setIsDocsOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        onCreateCollection={handleCreateCollectionFromDashboard}
+      />
+      <Footer />
     </div>
   );
 };
