@@ -24,27 +24,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
   const commands = [
     {
-      id: 'theme-dark',
-      name: 'Switch to Dark Theme',
-      category: 'Appearance',
-      icon: Moon,
-      action: () => updateSettings({ theme: 'dark' })
-    },
-    {
-      id: 'theme-light',
-      name: 'Switch to Light Theme',
-      category: 'Appearance',
-      icon: Sun,
-      action: () => updateSettings({ theme: 'light' })
-    },
-    {
-      id: 'theme-system',
-      name: 'Switch to System Theme',
-      category: 'Appearance',
-      icon: Monitor,
-      action: () => updateSettings({ theme: 'system' })
-    },
-    {
       id: 'new-request',
       name: 'Create New Request Tab',
       category: 'Request',
@@ -63,11 +42,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       name: 'Clear Request History',
       category: 'History',
       icon: Trash2,
-      action: () => {
-        if (confirm('Are you sure you want to clear all history?')) {
-          clearHistory();
-        }
-      }
+      action: clearHistory
     },
     {
       id: 'open-settings',

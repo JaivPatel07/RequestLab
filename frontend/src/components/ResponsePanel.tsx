@@ -1,12 +1,23 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import Editor from '@monaco-editor/react';
-import { Terminal, Copy, Check, Eye, Code, FileText, Globe } from 'lucide-react';
-import { KeyValuePair, RequestTab } from '../types';
+import { Terminal, Copy, Check, Eye, Code, FileText, Globe, CheckCircle, XCircle, ShieldAlert } from 'lucide-react';
+
+interface ResponseData {
+  status: number;
+  statusText: string;
+  headers: Record<string, string>;
+  cookies: string[];
+  duration: number;
+  size: number;
+  body: any;
+  isError?: boolean;
+  testResults?: { name: string; pass: boolean; isError?: boolean }[];
+}
 
 export const ResponsePanel: React.FC = () => {
   const { tabs, activeTabId, settings } = useStore();
-  const [activeSubTab, setActiveSubTab] = useState<'body' | 'headers' | 'cookies' | 'codegen'>('body');
+  const [activeSubTab, setActiveSubTab] = useState<'body' | 'headers' | 'cookies' | 'testresults' | 'codegen'>('body');
   const [bodyMode, setBodyMode] = useState<'pretty' | 'raw' | 'preview'>('pretty');
   const [copiedCode, setCopiedCode] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState<'curl' | 'javascript' | 'axios' | 'python'>('curl');
@@ -15,7 +26,7 @@ export const ResponsePanel: React.FC = () => {
 
   if (!activeTab) return null;
 
-  const { response, loading } = activeTab;
+  const { response, loading } = activeTab as { response: ResponseData | null; loading: boolean };
 
   if (loading) {
     return (
@@ -133,6 +144,10 @@ export const ResponsePanel: React.FC = () => {
     ? JSON.stringify(response.body, null, 2)
     : String(response.body);
 
+  const testResults = response.testResults || [];
+  const testsPassed = testResults.filter((r: any) => r.pass).length;
+  const testsFailed = testResults.length - testsPassed;
+
   const getLanguage = () => {
     if (typeof response.body === 'object') return 'json';
     const contentType = response.headers?.['content-type'] || '';
@@ -140,6 +155,18 @@ export const ResponsePanel: React.FC = () => {
     if (contentType.includes('xml')) return 'xml';
     return 'text';
   };
+
+  const subTabs = [
+    { id: 'body', label: 'Response Body' },
+    { id: 'headers', label: 'Headers' },
+    { id: 'cookies', label: 'Cookies' },
+  ];
+
+  if (testResults.length > 0) {
+    subTabs.splice(3, 0, { id: 'testresults', label: 'Test Results' });
+  }
+
+  subTabs.push({ id: 'codegen', label: 'Code Snippet' });
 
   return (
     <div className="h-full flex flex-col bg-[#0d0d11]/95 border-l border-slate-900 overflow-hidden select-none">
@@ -153,25 +180,31 @@ export const ResponsePanel: React.FC = () => {
           <span className="text-slate-400 font-semibold">{response.duration} ms</span>
           <span className="text-slate-400 font-semibold">{formatSize(response.size)}</span>
         </div>
+        {testResults.length > 0 && (
+          <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold ${testsFailed > 0 ? 'bg-rose-500/10 text-rose-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+            {testsFailed > 0 ? <XCircle size={13} /> : <CheckCircle size={13} />}
+            <span>{testsPassed} / {testResults.length} tests passed</span>
+          </div>
+        )}
       </div>
 
       {/* Response Panel Sub-tabs */}
       <div className="flex border-b border-slate-900/60 bg-slate-950/5 shrink-0 text-xs px-2">
-        {[
-          { id: 'body', label: 'Response Body' },
-          { id: 'headers', label: 'Headers' },
-          { id: 'cookies', label: 'Cookies' },
-          { id: 'codegen', label: 'Code Snippet' }
-        ].map((sub) => (
+        {subTabs.map((sub) => (
           <button
             key={sub.id}
             onClick={() => setActiveSubTab(sub.id as any)}
-            className={`px-4 py-2 font-medium border-b-2 transition-colors ${activeSubTab === sub.id
+            className={`flex items-center gap-2 px-4 py-2 font-medium border-b-2 transition-colors ${activeSubTab === sub.id
                 ? 'border-indigo-500 text-indigo-400 font-semibold'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
               }`}
           >
             {sub.label}
+            {sub.id === 'testresults' && (
+              <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${testsFailed > 0 ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                {testsPassed}/{testResults.length}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -282,6 +315,72 @@ export const ResponsePanel: React.FC = () => {
                 {response.cookies.map((cookie: string, index: number) => (
                   <div key={index} className="p-3 bg-slate-900/30 border border-slate-900 rounded-lg font-mono text-xs text-slate-300 break-all select-text">
                     {cookie}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 4. TEST RESULTS */}
+        {activeSubTab === 'testresults' && (
+          <div>
+            {testResults.length === 0 ? (
+              <div className="text-center py-8 text-xs text-slate-500">
+                No tests were run for this request.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {testResults.map((result: any, index: number) => (
+                  <div
+                    key={index}
+                    className={`flex items-center gap-3 p-3 rounded-lg border text-xs ${
+                      result.pass
+                        ? 'bg-emerald-950/40 border-emerald-500/20 text-emerald-300'
+                        : 'bg-rose-950/40 border-rose-500/20 text-rose-300'
+                    }`}
+                  >
+                    {result.isError ? (
+                      <ShieldAlert size={14} className="text-amber-400 shrink-0" />
+                    ) : result.pass ? (
+                      <CheckCircle size={14} className="text-emerald-400 shrink-0" />
+                    ) : (
+                      <XCircle size={14} className="text-rose-400 shrink-0" />
+                    )}
+                    <span className="font-medium">{result.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 4. TEST RESULTS */}
+        {activeSubTab === 'testresults' && (
+          <div>
+            {testResults.length === 0 ? (
+              <div className="text-center py-8 text-xs text-slate-500">
+                No tests were run for this request.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {testResults.map((result: any, index: number) => (
+                  <div
+                    key={index}
+                    className={`flex items-center gap-3 p-3 rounded-lg border text-xs ${
+                      result.pass
+                        ? 'bg-emerald-950/40 border-emerald-500/20 text-emerald-300'
+                        : 'bg-rose-950/40 border-rose-500/20 text-rose-300'
+                    }`}
+                  >
+                    {result.isError ? (
+                      <ShieldAlert size={14} className="text-amber-400 shrink-0" />
+                    ) : result.pass ? (
+                      <CheckCircle size={14} className="text-emerald-400 shrink-0" />
+                    ) : (
+                      <XCircle size={14} className="text-rose-400 shrink-0" />
+                    )}
+                    <span className="font-medium">{result.name}</span>
                   </div>
                 ))}
               </div>

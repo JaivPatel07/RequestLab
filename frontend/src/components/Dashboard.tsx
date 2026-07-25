@@ -90,8 +90,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div
           className="absolute inset-0 opacity-30"
           style={{
-            background:
-              'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(99,102,241,0.35) 0%, transparent 70%)',
+            background: 'radial-gradient(ellipse 80% 60% at 50% -20%, rgba(99,102,241,0.3) 0%, transparent 80%)',
           }}
         />
         <div className="relative px-10 pt-12 pb-6 max-w-5xl mx-auto animate-fade-in">
@@ -111,10 +110,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   Proxy Active
                 </span>
               </div>
-              <h1 className="text-5xl font-extrabold font-heading tracking-tight leading-none mb-3">
+              <h1 className="text-4xl font-extrabold font-heading tracking-tight leading-tight mb-3">
                 <span
                   style={{
-                    background: 'linear-gradient(90deg,#818cf8 0%,#c084fc 50%,#f472b6 100%)',
+                    background: 'linear-gradient(90deg, #a5b4fc 0%, #c084fc 100%)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                     backgroundClip: 'text',
@@ -123,7 +122,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   RequestLab
                 </span>
               </h1>
-              <p className="text-slate-400 text-sm max-w-md leading-relaxed">
+              <p className="text-slate-400 text-sm max-w-lg leading-relaxed">
                 A local-first API testing environment — no cloud, no limits, blazingly fast.
               </p>
             </div>
@@ -146,7 +145,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               return (
                 <div
                   key={s.label}
-                  className={`glass-card rounded-2xl p-5 flex items-center gap-4 border ${s.border}`}
+                  className={`glass-card rounded-xl p-5 flex items-center gap-4 border ${s.border}`}
                 >
                   <div className={`p-3 rounded-xl ${s.bg} ${s.color} shrink-0`}>
                     <Icon size={20} />
@@ -163,11 +162,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* Main content */}
-      <div className="px-10 pb-10 max-w-5xl mx-auto">
+      <div className="px-10 pb-10 max-w-5xl mx-auto animate-fade-in" style={{ animationDelay: '150ms' }}>
 
-        <div className="grid grid-cols-2 gap-6 mb-6">
+        <div className="grid grid-cols-2 gap-5 mb-5">
           {/* Quick Actions */}
-          <div className="glass-card rounded-2xl p-6">
+          <div className="glass-card rounded-xl p-6">
             <div className="flex items-center gap-2 mb-5">
               <Zap size={15} className="text-indigo-400" />
               <span className="text-sm font-semibold text-slate-200 font-heading">Quick Actions</span>
@@ -200,7 +199,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
 
           {/* Recent History */}
-          <div className="glass-card rounded-2xl p-6">
+          <div className="glass-card rounded-xl p-6">
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2">
                 <History size={15} className="text-emerald-400" />
@@ -258,8 +257,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* How It Works */}
-        <div className="grid grid-cols-2 gap-6">
-          <div className="glass-card rounded-2xl p-6">
+        <div className="grid grid-cols-2 gap-5">
+          <div className="glass-card rounded-xl p-6">
             <div className="flex items-center gap-2 mb-5">
               <Globe size={15} className="text-indigo-400" />
               <span className="text-sm font-semibold text-slate-200 font-heading">How It Works</span>
@@ -296,7 +295,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
 
           {/* Keyboard Shortcuts */}
-          <div className="glass-card rounded-2xl p-6">
+          <div className="glass-card rounded-xl p-6">
             <div className="flex items-center gap-2 mb-5">
               <Terminal size={15} className="text-amber-400" />
               <span className="text-sm font-semibold text-slate-200 font-heading">Keyboard Shortcuts</span>

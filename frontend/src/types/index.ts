@@ -29,6 +29,8 @@ export interface RequestItem {
   bodyType: string;
   bodyContent: string | null;
   cookies: string | null; // JSON serialized string of KeyValuePair[]
+  testScript: string | null;
+  preRequestScript: string | null;
   settings: string | null; // JSON serialized string of RequestSettings
   collectionId: string;
   order: number;
@@ -92,6 +94,8 @@ export interface RequestTab {
   bodyType: 'none' | 'json' | 'formdata' | 'urlencoded' | 'text' | 'xml';
   bodyContent: string;
   cookies: KeyValuePair[];
+  testScript: string;
+  preRequestScript: string;
   settings: RequestSettings;
   isDirty?: boolean;
   response?: ResponseData | null;

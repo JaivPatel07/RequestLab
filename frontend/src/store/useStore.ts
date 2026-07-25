@@ -11,11 +11,16 @@ interface RequestLabState {
   tabs: RequestTab[];
   activeTabId: string | null;
   settings: {
-    theme: 'light' | 'dark' | 'system';
     fontSize: number;
     autoSave: boolean;
     wordWrap: boolean;
     timeout: number;
+  };
+  runnerState: {
+    isOpen: boolean;
+    isRunning: boolean;
+    collectionId: string | null;
+    results: any | null;
   };
 
   // Collections actions
@@ -23,6 +28,7 @@ interface RequestLabState {
   addCollection: (name: string, parentId?: string | null) => Promise<Collection>;
   updateCollection: (id: string, updates: Partial<Collection>) => Promise<Collection>;
   deleteCollection: (id: string) => Promise<void>;
+  duplicateCollection: (id: string) => Promise<void>;
 
   // Requests actions
   addRequest: (name: string, method: string, collectionId: string) => Promise<RequestItem>;
@@ -40,6 +46,7 @@ interface RequestLabState {
 
   // History actions
   loadHistory: () => Promise<void>;
+  updateHistoryItem: (id: string, updates: Partial<HistoryItem>) => Promise<void>;
   deleteHistoryItem: (id: string) => Promise<void>;
   clearHistory: () => Promise<void>;
 
@@ -48,13 +55,17 @@ interface RequestLabState {
   closeTab: (id: string) => void;
   setActiveTabId: (id: string | null) => void;
   updateTab: (id: string, updates: Partial<RequestTab>) => void;
-  updateActiveTab: (updates: Partial<RequestTab>) => void;
 
   // Settings actions
   updateSettings: (updates: Partial<RequestLabState['settings']>) => void;
 
   // Request Trigger
   sendRequest: (tabId: string) => Promise<void>;
+
+  // Collection Runner actions
+  openRunner: (collectionId: string) => void;
+  closeRunner: () => void;
+  runCollection: (collectionId:string) => Promise<void>;
 }
 
 const DEFAULT_TAB = (id: string): RequestTab => ({
@@ -69,6 +80,8 @@ const DEFAULT_TAB = (id: string): RequestTab => ({
   bodyType: 'none',
   bodyContent: '',
   cookies: [{ key: '', value: '', enabled: true }],
+  preRequestScript: '',
+  testScript: '',
   settings: { timeout: 30000 },
   loading: false,
   response: null,
@@ -79,7 +92,6 @@ export const useStore = create<RequestLabState>((set, get) => {
   // Read initial theme and settings from localStorage
   const savedSettings = localStorage.getItem('requestlab-settings');
   const initialSettings = savedSettings ? JSON.parse(savedSettings) : {
-    theme: 'dark',
     fontSize: 14,
     autoSave: true,
     wordWrap: true,
@@ -94,6 +106,12 @@ export const useStore = create<RequestLabState>((set, get) => {
     tabs: [],
     activeTabId: null,
     settings: initialSettings,
+    runnerState: {
+      isOpen: false,
+      isRunning: false,
+      collectionId: null,
+      results: null,
+    },
 
     // Collections
     loadCollections: async () => {
@@ -118,22 +136,28 @@ export const useStore = create<RequestLabState>((set, get) => {
       await axios.delete(`/api/collections/${id}`);
       // Close tabs related to deleted requests in collection
       const state = get();
-      await state.loadCollections();
-      const updatedCollections = get().collections;
-      const allRequestIds = new Set<string>();
-      const collectIds = (cols: Collection[]) => {
-        for (const c of cols) {
-          c.requests.forEach(r => allRequestIds.add(r.id));
-        }
-      };
-      collectIds(updatedCollections);
+      await state.loadCollections(); // Refresh collections list
 
-      const activeTabs = state.tabs.filter(t => !t.requestId || allRequestIds.has(t.requestId));
+      // Find all collections/folders being deleted (the collection and its children)
+      const deletedCollectionIds = new Set([id]);
+      const findChildren = (parentId: string) => {
+        get().collections.filter(c => c.parentId === parentId).forEach(c => {
+          deletedCollectionIds.add(c.id);
+          findChildren(c.id);
+        });
+      };
+      findChildren(id);
+
+      const activeTabs = state.tabs.filter(t => !t.collectionId || !deletedCollectionIds.has(t.collectionId));
       let nextActiveId = state.activeTabId;
       if (nextActiveId && !activeTabs.find(t => t.id === nextActiveId)) {
         nextActiveId = activeTabs.length > 0 ? activeTabs[0].id : null;
       }
       set({ tabs: activeTabs, activeTabId: nextActiveId });
+    },
+    duplicateCollection: async (id) => {
+      await axios.post(`/api/collections/${id}/duplicate`);
+      await get().loadCollections();
     },
 
     // Requests
@@ -142,6 +166,8 @@ export const useStore = create<RequestLabState>((set, get) => {
         name,
         method,
         collectionId,
+        testScript: '',
+        preRequestScript: '',
         headers: JSON.stringify([{ key: '', value: '', enabled: true }]),
         params: JSON.stringify([{ key: '', value: '', enabled: true }]),
         authType: 'none',
@@ -163,7 +189,8 @@ export const useStore = create<RequestLabState>((set, get) => {
       const tabIndex = state.tabs.findIndex(t => t.requestId === id);
       if (tabIndex !== -1) {
         const tab = state.tabs[tabIndex];
-        const updatedTab: RequestTab = {
+        const requestUpdates = updates as Partial<RequestItem>;
+        const updatedTab = {
           ...tab,
           name: updates.name ?? tab.name,
           method: updates.method ?? tab.method,
@@ -175,9 +202,11 @@ export const useStore = create<RequestLabState>((set, get) => {
           bodyType: (updates.bodyType as any) ?? tab.bodyType,
           bodyContent: updates.bodyContent ?? tab.bodyContent,
           cookies: updates.cookies ? JSON.parse(updates.cookies) : tab.cookies,
+          testScript: requestUpdates.testScript ?? tab.testScript,
+          preRequestScript: requestUpdates.preRequestScript ?? tab.preRequestScript,
           settings: updates.settings ? JSON.parse(updates.settings) : tab.settings,
           isDirty: false
-        };
+        } as RequestTab;
         const newTabs = [...state.tabs];
         newTabs[tabIndex] = updatedTab;
         set({ tabs: newTabs });
@@ -258,6 +287,10 @@ export const useStore = create<RequestLabState>((set, get) => {
         console.error('Failed to load history', error);
       }
     },
+    updateHistoryItem: async (id, updates) => {
+      await axios.patch(`/api/history/${id}`, updates);
+      await get().loadHistory();
+    },
     deleteHistoryItem: async (id) => {
       await axios.delete(`/api/history/${id}`);
       await get().loadHistory();
@@ -293,17 +326,16 @@ export const useStore = create<RequestLabState>((set, get) => {
     },
     closeTab: (id) => {
       const state = get();
-      const filtered = state.tabs.filter(t => t.id !== id && t.requestId !== id && `req-${t.requestId}` !== id);
+      const tabIndex = state.tabs.findIndex(t => t.id === id);
+      if (tabIndex === -1) return;
 
+      const filtered = state.tabs.filter(t => t.id !== id);
       let nextActiveId = state.activeTabId;
-      if (nextActiveId === id || `req-${nextActiveId}` === id) {
-        nextActiveId = filtered.length > 0 ? filtered[filtered.length - 1].id : null;
+      if (nextActiveId === id) {
+        nextActiveId = filtered[tabIndex] ? filtered[tabIndex].id : filtered[tabIndex - 1] ? filtered[tabIndex - 1].id : null;
       }
 
-      set({
-        tabs: filtered,
-        activeTabId: nextActiveId
-      });
+      set({ tabs: filtered, activeTabId: nextActiveId });
     },
     setActiveTabId: (id) => {
       set({ activeTabId: id });
@@ -336,13 +368,11 @@ export const useStore = create<RequestLabState>((set, get) => {
           bodyType: tab.bodyType,
           bodyContent: tab.bodyContent,
           cookies: JSON.stringify(tab.cookies),
+          testScript: tab.testScript,
+          preRequestScript: tab.preRequestScript,
           settings: JSON.stringify(tab.settings)
         });
       }
-    },
-    updateActiveTab: (updates) => {
-      const activeId = get().activeTabId;
-      if (activeId) get().updateTab(activeId, updates);
     },
 
     // Settings
@@ -350,22 +380,6 @@ export const useStore = create<RequestLabState>((set, get) => {
       const updated = { ...get().settings, ...updates };
       set({ settings: updated });
       localStorage.setItem('requestlab-settings', JSON.stringify(updated));
-
-      // Theme toggle effect
-      const root = window.document.documentElement;
-      if (updated.theme === 'dark') {
-        root.classList.add('dark');
-      } else if (updated.theme === 'light') {
-        root.classList.remove('dark');
-      } else {
-        // System preference
-        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        if (systemDark) {
-          root.classList.add('dark');
-        } else {
-          root.classList.remove('dark');
-        }
-      }
     },
 
     // Trigger Request
@@ -431,6 +445,8 @@ export const useStore = create<RequestLabState>((set, get) => {
           bodyType: tab.bodyType,
           bodyContent: resolvedBodyContent,
           cookies: resolvedCookies,
+          testScript: tab.testScript,
+          preRequestScript: tab.preRequestScript,
           settings: JSON.stringify({ ...tab.settings, timeout: state.settings.timeout })
         });
 
@@ -470,6 +486,36 @@ export const useStore = create<RequestLabState>((set, get) => {
           set({ tabs: freshTabs });
         }
       }
-    }
+    },
+
+    // Collection Runner
+    openRunner: (collectionId) => {
+      set({ runnerState: { isOpen: true, isRunning: false, collectionId, results: null } });
+    },
+    closeRunner: () => {
+      set({ runnerState: { isOpen: false, isRunning: false, collectionId: null, results: null } });
+    },
+    runCollection: async (collectionId) => {
+      const state = get();
+      set({ runnerState: { ...state.runnerState, isRunning: true, results: null } });
+
+      try {
+        const activeEnv = state.environments.find(e => e.id === state.activeEnvironmentId) || null;
+        const globalEnv = state.environments.find(e => e.isGlobal) || null;
+        
+        const response = await axios.post(`/api/collections/${collectionId}/run`, {
+          environment: {
+            active: activeEnv,
+            global: globalEnv,
+          }
+        });
+
+        set({ runnerState: { ...state.runnerState, isRunning: false, results: response.data } });
+      } catch (error) {
+        console.error('Collection run failed', error);
+        set({ runnerState: { ...state.runnerState, isRunning: false } });
+      }
+    },
+
   };
 });

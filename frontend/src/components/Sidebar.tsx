@@ -14,7 +14,8 @@ import {
   Sliders,
   Sparkles,
   Copy,
-  BookOpen
+  BookOpen,
+  Play
 } from 'lucide-react';
 import { Collection } from '../types';
 
@@ -30,6 +31,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenEnvironm
     addCollection,
     updateCollection,
     deleteCollection,
+    duplicateCollection,
     addRequest,
     deleteRequest,
     duplicateRequest,
@@ -40,29 +42,40 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenEnvironm
     history,
     deleteHistoryItem,
     clearHistory,
-    addTab
+    updateHistoryItem,
+    addTab,
+    openRunner
   } = useStore();
 
   const [activeTab, setActiveTab] = useState<'collections' | 'history'>('collections');
   const [searchQuery, setSearchQuery] = useState('');
   const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({});
 
+  const [showFavoriteHistory, setShowFavoriteHistory] = useState(false);
   // Inline renaming state
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renamingName, setRenamingName] = useState('');
+
+  // Inline creation state
+  const [creatingItem, setCreatingItem] = useState<{ type: 'collection' | 'folder', parentId: string | null } | null>(null);
+  const [newItemName, setNewItemName] = useState('');
 
   const toggleFolder = (id: string) => {
     setOpenFolders(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const handleCreateCollection = async () => {
-    const name = prompt('Enter collection name:');
-    if (name) await addCollection(name);
+  const handleCreateCollection = () => {
+    setCreatingItem({ type: 'collection', parentId: null });
+    setNewItemName('');
   };
 
-  const handleCreateFolder = async (parentId: string) => {
-    const name = prompt('Enter folder name:');
-    if (name) await addCollection(name, parentId);
+  const handleCreateFolder = (parentId: string) => {
+    setCreatingItem({ type: 'folder', parentId });
+    setNewItemName('');
+    // Ensure parent folder is open
+    if (!openFolders[parentId]) {
+      toggleFolder(parentId);
+    }
   };
 
   const handleCreateRequest = async (collectionId: string) => {
@@ -88,6 +101,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenEnvironm
         collectionId: req.collectionId
       });
     }
+  };
+
+  const finishCreate = async () => {
+    if (newItemName.trim() && creatingItem) {
+      await addCollection(newItemName.trim(), creatingItem.parentId);
+    }
+    setCreatingItem(null);
+    setNewItemName('');
+  };
+
+  const cancelCreate = () => {
+    setCreatingItem(null);
   };
 
   const startRename = (id: string, currentName: string) => {
@@ -210,8 +235,38 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenEnvironm
 
   const filteredHistory = history.filter(h =>
     h.url.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    h.method.toLowerCase().includes(searchQuery.toLowerCase())
+    h.method.toLowerCase().includes(searchQuery.toLowerCase()) &&
+    (!showFavoriteHistory || h.isFavorite)
   );
+
+  const groupedHistory = filteredHistory.reduce((acc, item) => {
+    const itemDate = new Date(item.createdAt);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    let groupName = '';
+
+    if (itemDate.toDateString() === today.toDateString()) {
+      groupName = 'Today';
+    } else if (itemDate.toDateString() === yesterday.toDateString()) {
+      groupName = 'Yesterday';
+    } else {
+      groupName = itemDate.toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    }
+
+    if (!acc[groupName]) {
+      acc[groupName] = [];
+    }
+    acc[groupName].push(item);
+    return acc;
+  }, {} as Record<string, typeof history>);
+
+  const historyGroups = Object.entries(groupedHistory);
 
   return (
     <div className="w-full h-full flex flex-col bg-[#0d0d11]/95 border-r border-slate-900 overflow-hidden shrink-0 select-none">
@@ -332,6 +387,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenEnvironm
             </div>
 
             {/* List */}
+            {creatingItem && creatingItem.type === 'collection' && (
+              <div className="p-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Folder size={14} className="text-indigo-400 shrink-0 ml-1" />
+                  <input
+                    type="text"
+                    placeholder="New Collection"
+                    value={newItemName}
+                    onChange={(e) => setNewItemName(e.target.value)}
+                    onBlur={finishCreate}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') finishCreate();
+                      if (e.key === 'Escape') cancelCreate();
+                    }}
+                    autoFocus
+                    className="bg-slate-800 border border-indigo-500 rounded px-1 text-[11px] text-slate-100 w-full"
+                  />
+                </div>
+              </div>
+            )}
             {filteredCollections.length === 0 ? (
               <div className="text-center py-8 text-xs text-slate-550">
                 No collections found.
@@ -376,6 +451,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenEnvironm
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
+                              openRunner(c.id);
+                            }}
+                            title="Run Collection"
+                            className="p-0.5 text-slate-400 hover:text-emerald-400 rounded hover:bg-slate-800"
+                          ><Play size={12} /></button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
                               handleCreateRequest(c.id);
                             }}
                             title="Add Request"
@@ -393,6 +476,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenEnvironm
                           >
                             <FolderPlus size={12} />
                           </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              duplicateCollection(c.id);
+                            }}
+                            title="Duplicate Collection"
+                            className="p-0.5 text-slate-400 hover:text-indigo-400 rounded hover:bg-slate-800"
+                          ><Copy size={12} /></button>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -441,6 +532,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenEnvironm
                       {/* Collection Requests & Folders */}
                       {isOpen && (
                         <div className="pl-4 mt-1 space-y-0.5 border-l border-slate-900 ml-2.5">
+                          {creatingItem && creatingItem.parentId === c.id && (
+                            <div className="p-1">
+                              <div className="flex items-center gap-1.5">
+                                <Folder size={13} className="text-indigo-400/80 shrink-0 ml-1" />
+                                <input
+                                  type="text"
+                                  placeholder="New Folder"
+                                  value={newItemName}
+                                  onChange={(e) => setNewItemName(e.target.value)}
+                                  onBlur={finishCreate}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') finishCreate();
+                                    if (e.key === 'Escape') cancelCreate();
+                                  }}
+                                  autoFocus
+                                  className="bg-slate-800 border border-indigo-500 rounded px-1 text-[11px] text-slate-100 w-full"
+                                />
+                              </div>
+                            </div>
+                          )}
                           {/* Render Subfolders */}
                           {c.subFolders.map(sub => {
                             const subOpen = openFolders[sub.id];
@@ -499,6 +610,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenEnvironm
                                 {/* Requests in folder */}
                                 {subOpen && (
                                   <div className="pl-3 space-y-0.5 border-l border-slate-900 ml-1.5">
+                                    {creatingItem && creatingItem.parentId === sub.id && (
+                                      <div className="p-1">
+                                        <div className="flex items-center gap-1.5">
+                                          <Folder size={13} className="text-indigo-400/80 shrink-0 ml-1" />
+                                          <input
+                                            type="text"
+                                            placeholder="New Folder"
+                                            value={newItemName}
+                                            onChange={(e) => setNewItemName(e.target.value)}
+                                            onBlur={finishCreate}
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter') finishCreate();
+                                              if (e.key === 'Escape') cancelCreate();
+                                            }}
+                                            autoFocus
+                                            className="bg-slate-800 border border-indigo-500 rounded px-1 text-[11px] text-slate-100 w-full"
+                                          />
+                                        </div>
+                                      </div>
+                                    )}
                                     {collections.find(x => x.id === sub.id)?.requests.map(r => (
                                       <div
                                         key={r.id}
@@ -523,9 +654,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenEnvironm
                                         className="flex items-center justify-between p-1 rounded hover:bg-slate-900/60 cursor-pointer group text-[11px]"
                                       >
                                         <div className="flex items-center gap-1.5 min-w-0">
-                                          <span className={`font-extrabold uppercase text-[9px] w-8 text-center shrink-0 ${
-                                            r.method === 'GET' ? 'text-emerald-450' : r.method === 'POST' ? 'text-indigo-400' : 'text-amber-450'
-                                          }`}>
+                                          <span className={`font-extrabold uppercase text-[9px] w-8 text-center shrink-0 ${methodColorClass(r.method)}`}>
                                             {r.method}
                                           </span>
                                           <span className="truncate text-slate-300">{r.name}</span>
@@ -587,9 +716,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenEnvironm
                               className="flex items-center justify-between p-1 rounded hover:bg-slate-900/60 cursor-pointer group text-[11px]"
                             >
                               <div className="flex items-center gap-1.5 min-w-0">
-                                <span className={`font-extrabold uppercase text-[9px] w-8 text-center shrink-0 ${
-                                  r.method === 'GET' ? 'text-emerald-400' : r.method === 'POST' ? 'text-indigo-400' : 'text-amber-400'
-                                }`}>
+                                <span className={`font-extrabold uppercase text-[9px] w-8 text-center shrink-0 ${methodColorClass(r.method)}`}>
                                   {r.method}
                                 </span>
                                 <span className="truncate text-slate-350">{r.name}</span>
@@ -632,7 +759,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenEnvironm
           <div>
             {/* History Panel */}
             <div className="flex items-center justify-between mb-2 px-1">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">History Log</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">History Log</span>
+                <button
+                  onClick={() => setShowFavoriteHistory(!showFavoriteHistory)}
+                  title={showFavoriteHistory ? "Show All History" : "Show Favorites Only"}
+                  className={`p-1 rounded-md transition-colors ${showFavoriteHistory ? 'bg-amber-500/15 text-amber-400' : 'text-slate-500 hover:bg-slate-800'}`}
+                >
+                  <Star size={12} className={showFavoriteHistory ? 'fill-amber-400' : ''} />
+                </button>
+              </div>
               <button
                 onClick={clearHistory}
                 className="text-[10px] text-rose-400 hover:text-rose-350 font-semibold"
@@ -646,64 +782,81 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenEnvironm
                 No request history.
               </div>
             ) : (
-              <div className="space-y-1">
-                {filteredHistory.map(item => {
-                  const isSuccess = item.status >= 200 && item.status < 300;
-                  const isClientError = item.status >= 400 && item.status < 500;
-                  const statusColor = isSuccess
-                    ? 'text-emerald-400 bg-emerald-500/10'
-                    : isClientError
-                    ? 'text-amber-400 bg-amber-500/10'
-                    : 'text-rose-400 bg-rose-500/10';
+              <div className="space-y-3">
+                {historyGroups.map(([groupName, items]) => (
+                  <div key={groupName}>
+                    <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-1 mb-1.5">{groupName}</h4>
+                    <div className="space-y-1">
+                      {items.map(item => {
+                        const isSuccess = item.status >= 200 && item.status < 300;
+                        const isClientError = item.status >= 400 && item.status < 500;
+                        const statusColor = isSuccess
+                          ? 'text-emerald-400 bg-emerald-500/10'
+                          : isClientError
+                          ? 'text-amber-400 bg-amber-500/10'
+                          : 'text-rose-400 bg-rose-500/10';
 
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => addTab({
-                        name: item.url.split('/').pop() || 'Request',
-                        method: item.method,
-                        url: item.url,
-                        response: {
-                          status: item.status,
-                          statusText: item.statusText,
-                          headers: JSON.parse(item.responseHeaders || '{}'),
-                          cookies: JSON.parse(item.cookies || '[]'),
-                          duration: item.duration,
-                          size: item.responseSize,
-                          body: (() => {
-                            try {
-                              return JSON.parse(item.responseBody || '""');
-                            } catch (e) {
-                              return item.responseBody || '';
-                            }
-                          })()
-                        }
+                        return (
+                          <div
+                            key={item.id}
+                            onClick={() => addTab({
+                              name: item.url.split('/').pop() || 'Request',
+                              method: item.method,
+                              url: item.url,
+                              response: {
+                                status: item.status,
+                                statusText: item.statusText,
+                                headers: JSON.parse(item.responseHeaders || '{}'),
+                                cookies: JSON.parse(item.cookies || '[]'),
+                                duration: item.duration,
+                                size: item.responseSize,
+                                body: (() => {
+                                  try {
+                                    return JSON.parse(item.responseBody || '""');
+                                  } catch (e) {
+                                    return item.responseBody || '';
+                                  }
+                                })()
+                              }
+                            })}
+                            className="flex items-center justify-between p-2 rounded-lg bg-slate-900/30 border border-slate-900/50 hover:bg-slate-800/30 cursor-pointer group text-[11px]"
+                          >
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className={`font-bold px-1 py-0.5 rounded text-[9px] uppercase w-10 text-center ${statusColor}`}>
+                                {item.method}
+                              </span>
+                              <span className="truncate text-slate-300 font-mono text-[10px]">{item.url}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] shrink-0 text-slate-500">
+                              <span className={item.status === 0 ? 'text-rose-450' : 'text-slate-450'}>
+                                {item.status === 0 ? 'ERR' : item.status}
+                              </span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updateHistoryItem(item.id, { isFavorite: !item.isFavorite });
+                                }}
+                                className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-500 hover:text-amber-400 transition-opacity"
+                                title="Favorite"
+                              >
+                                <Star size={11} className={item.isFavorite ? 'fill-amber-400 text-amber-400' : ''} />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteHistoryItem(item.id);
+                                }}
+                                className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-500 hover:text-rose-400 transition-opacity"
+                              >
+                                <Trash2 size={11} />
+                              </button>
+                            </div>
+                          </div>
+                        );
                       })}
-                      className="flex items-center justify-between p-2 rounded-lg bg-slate-900/30 border border-slate-900/50 hover:bg-slate-800/30 cursor-pointer group text-[11px]"
-                    >
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className={`font-bold px-1 py-0.5 rounded text-[9px] uppercase w-10 text-center ${statusColor}`}>
-                          {item.method}
-                        </span>
-                        <span className="truncate text-slate-300 font-mono text-[10px]">{item.url}</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-[10px] shrink-0 text-slate-500">
-                        <span className={item.status === 0 ? 'text-rose-450' : 'text-slate-450'}>
-                          {item.status === 0 ? 'ERR' : item.status}
-                        </span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteHistoryItem(item.id);
-                          }}
-                          className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-500 hover:text-rose-400 transition-opacity"
-                        >
-                          <Trash2 size={11} />
-                        </button>
-                      </div>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -712,4 +865,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenEnvironm
 
     </div>
   );
+};
+
+const methodColorClass = (method: string) => {
+  switch (method) {
+    case 'GET': return 'text-emerald-400'; // Green
+    case 'POST': return 'text-indigo-400'; // Blue
+    case 'PUT': return 'text-amber-400'; // Orange
+    case 'PATCH': return 'text-purple-400'; // Purple
+    case 'DELETE': return 'text-rose-400'; // Red
+    default: return 'text-slate-400';
+  }
 };

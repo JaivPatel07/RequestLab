@@ -27,35 +27,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
         {/* Content */}
         <div className="p-6 space-y-5">
-          {/* Theme Selector */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Theme</label>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { value: 'light', label: 'Light', icon: Sun },
-                { value: 'dark', label: 'Dark', icon: Moon },
-                { value: 'system', label: 'System', icon: Monitor }
-              ].map((item) => {
-                const Icon = item.icon;
-                const active = settings.theme === item.value;
-                return (
-                  <button
-                    key={item.value}
-                    onClick={() => updateSettings({ theme: item.value as any })}
-                    className={`flex flex-col items-center justify-center py-2.5 px-3 rounded-lg border text-xs font-medium transition-all ${
-                      active
-                        ? 'bg-indigo-500/10 border-indigo-500 text-indigo-400'
-                        : 'bg-slate-900/50 border-slate-800 hover:border-slate-700 text-slate-400'
-                    }`}
-                  >
-                    <Icon size={16} className="mb-1" />
-                    {item.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
           {/* Editor Font Size */}
           <div>
             <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Editor Font Size (px)</label>

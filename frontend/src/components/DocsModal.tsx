@@ -9,6 +9,7 @@ import {
   Key,
   Terminal,
   History,
+  Search,
   Sliders,
   CheckCircle,
   ChevronRight,
@@ -22,31 +23,56 @@ interface DocsModalProps {
   onClose: () => void;
 }
 
-const sections = [
-  { id: 'overview', label: 'Overview', icon: BookOpen },
-  { id: 'quickstart', label: 'Quick Start', icon: Zap },
-  { id: 'requests', label: 'Making Requests', icon: Send },
-  { id: 'collections', label: 'Collections', icon: Folder },
-  { id: 'environments', label: 'Environments', icon: Sliders },
-  { id: 'auth', label: 'Authentication', icon: Key },
-  { id: 'history', label: 'History', icon: History },
-  { id: 'shortcuts', label: 'Keyboard Shortcuts', icon: Terminal },
+const navGroups = [
+  {
+    title: 'Getting Started',
+    items: [
+      { id: 'overview', label: 'Overview', icon: BookOpen },
+      { id: 'quickstart', label: 'Quick Start', icon: Zap },
+    ]
+  },
+  {
+    title: 'Core Features',
+    items: [
+      { id: 'requests', label: 'Making Requests', icon: Send },
+      { id: 'collections', label: 'Collections', icon: Folder },
+      { id: 'environments', label: 'Environments', icon: Sliders },
+      { id: 'auth', label: 'Authentication', icon: Key },
+    ]
+  },
+  {
+    title: 'Reference',
+    items: [
+      { id: 'history', label: 'History', icon: History },
+      { id: 'shortcuts', label: 'Keyboard Shortcuts', icon: Terminal },
+    ]
+  }
 ];
 
 export const DocsModal: React.FC<DocsModalProps> = ({ isOpen, onClose }) => {
   const [activeSection, setActiveSection] = useState('overview');
+  const [searchQuery, setSearchQuery] = useState('');
 
   if (!isOpen) return null;
+
+  const allSections = navGroups.flatMap(g => g.items);
+
+  const filteredNavGroups = navGroups.map(group => {
+    const filteredItems = group.items.filter(item => 
+      item.label.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    return { ...group, items: filteredItems };
+  }).filter(group => group.items.length > 0);
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}
+      style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className="relative w-full max-w-5xl h-[85vh] flex flex-col rounded-2xl overflow-hidden border border-slate-800 shadow-2xl"
-        style={{ background: 'linear-gradient(135deg, #0d0d13 0%, #0b0c14 100%)' }}
+        className="relative w-full max-w-5xl h-[85vh] flex flex-col rounded-xl overflow-hidden border border-slate-800 shadow-2xl bg-[#0f111a]"
+        style={{ background: 'radial-gradient(circle at top, rgba(15, 17, 26, 1) 0%, rgba(11, 12, 18, 1) 100%)' }}
       >
         {/* Header */}
         <div
@@ -54,7 +80,7 @@ export const DocsModal: React.FC<DocsModalProps> = ({ isOpen, onClose }) => {
           style={{ background: 'linear-gradient(90deg, rgba(99,102,241,0.08) 0%, transparent 100%)' }}
         >
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-indigo-500/15 border border-indigo-500/20">
+            <div className="p-2 rounded-lg bg-indigo-500/15 border border-indigo-500/20">
               <BookOpen size={20} className="text-indigo-400" />
             </div>
             <div>
@@ -74,26 +100,43 @@ export const DocsModal: React.FC<DocsModalProps> = ({ isOpen, onClose }) => {
         <div className="flex flex-1 overflow-hidden">
           {/* Left nav */}
           <div className="w-52 border-r border-slate-800 shrink-0 overflow-y-auto py-4 px-2"
-            style={{ background: 'rgba(10,10,16,0.6)' }}>
-            {sections.map((sec) => {
-              const Icon = sec.icon;
-              const isActive = activeSection === sec.id;
-              return (
-                <button
-                  key={sec.id}
-                  onClick={() => setActiveSection(sec.id)}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-all mb-0.5 text-left ${
-                    isActive
-                      ? 'bg-indigo-500/15 text-indigo-300 border border-indigo-500/20'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 border border-transparent'
-                  }`}
-                >
-                  <Icon size={14} className={isActive ? 'text-indigo-400' : 'text-slate-500'} />
-                  {sec.label}
-                  {isActive && <ChevronRight size={12} className="ml-auto text-indigo-400" />}
-                </button>
-              );
-            })}
+            style={{ background: 'rgba(10,10,16,0.4)' }}>
+            <div className="px-2 mb-4">
+              <div className="relative flex items-center">
+                <Search size={14} className="absolute left-2.5 text-slate-500" />
+                <input
+                  type="text"
+                  placeholder="Search docs..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-slate-900/70 border border-slate-800 rounded-lg py-1.5 pl-8 pr-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+            </div>
+            {filteredNavGroups.map(group => (
+              <div key={group.title} className="mb-4">
+                <h4 className="px-3 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">{group.title}</h4>
+                {group.items.map((sec) => {
+                  const Icon = sec.icon;
+                  const isActive = activeSection === sec.id;
+                  return (
+                    <button
+                      key={sec.id}
+                      onClick={() => setActiveSection(sec.id)}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all mb-0.5 text-left ${
+                        isActive
+                          ? 'bg-indigo-500/10 text-indigo-300'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 border border-transparent'
+                      }`}
+                    >
+                      <Icon size={14} className={isActive ? 'text-indigo-400' : 'text-slate-500'} />
+                      {sec.label}
+                      {isActive && <ChevronRight size={12} className="ml-auto text-indigo-400" />}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
           </div>
 
           {/* Right content */}
@@ -122,7 +165,7 @@ const SectionTitle: React.FC<{ icon: React.ElementType; title: string; subtitle?
       <h3 className="text-xl font-bold font-heading text-slate-100">{title}</h3>
     </div>
     {subtitle && <p className="text-slate-400 text-sm">{subtitle}</p>}
-    <div className="mt-3 h-px bg-gradient-to-r from-indigo-500/40 via-purple-500/20 to-transparent" />
+    <div className="mt-4 h-px bg-gradient-to-r from-indigo-500/30 via-purple-500/10 to-transparent" />
   </div>
 );
 
@@ -130,7 +173,7 @@ const Step: React.FC<{ n: number; title: string; children: React.ReactNode }> = 
   <div className="flex gap-4 mb-5">
     <div className="flex-shrink-0 w-7 h-7 rounded-full bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 text-xs font-bold mt-0.5">{n}</div>
     <div>
-      <div className="font-semibold text-slate-200 mb-1">{title}</div>
+      <div className="font-semibold text-slate-100 mb-1">{title}</div>
       <div className="text-slate-400 text-sm">{children}</div>
     </div>
   </div>
@@ -138,12 +181,12 @@ const Step: React.FC<{ n: number; title: string; children: React.ReactNode }> = 
 
 const Callout: React.FC<{ type?: 'info' | 'tip' | 'warning'; children: React.ReactNode }> = ({ type = 'info', children }) => {
   const styles = {
-    info:    'bg-indigo-500/8 border-indigo-500/25 text-indigo-300',
-    tip:     'bg-emerald-500/8 border-emerald-500/25 text-emerald-300',
-    warning: 'bg-amber-500/8  border-amber-500/25  text-amber-300',
+    info:    'bg-indigo-950/50 border-indigo-500/25 text-indigo-300',
+    tip:     'bg-emerald-950/50 border-emerald-500/25 text-emerald-300',
+    warning: 'bg-amber-950/50  border-amber-500/25  text-amber-300',
   };
   return (
-    <div className={`rounded-lg border px-4 py-3 my-4 text-sm ${styles[type]}`}>{children}</div>
+    <div className={`rounded-lg border px-4 py-3 my-5 text-sm ${styles[type]}`}>{children}</div>
   );
 };
 
@@ -170,7 +213,7 @@ const OverviewSection = () => (
         { icon: Layers,    label: 'Collections', desc: 'Organise requests into folders' },
         { icon: Sliders,   label: 'Environments', desc: 'Variable scopes for any stage' },
         { icon: Code2,     label: 'Code Gen',    desc: 'Export as cURL or code snippets' },
-        { icon: History,   label: 'History',     desc: 'Re-run any past request instantly' },
+        { icon: History,   label: 'History',     desc: 'Re-run any past request' },
       ].map(f => (
         <div key={f.label} className="glass-card p-4 rounded-xl border border-slate-800">
           <f.icon size={16} className="text-indigo-400 mb-2" />
@@ -193,7 +236,7 @@ const QuickStartSection = () => (
   <div>
     <SectionTitle icon={Zap} title="Quick Start" subtitle="Get your first API request sent in under 60 seconds." />
     <Step n={1} title="Open a new request tab">
-      Click <strong className="text-slate-200">New Request</strong> on the Dashboard, or press <Kbd>Ctrl + T</Kbd> anywhere in the app.
+      Click the <strong className="text-slate-200">New Request</strong> button, or press <Kbd>Ctrl + T</Kbd> anywhere in the app.
       A blank request tab opens with method set to <Code>GET</Code>.
     </Step>
     <Step n={2} title="Enter a URL">
@@ -209,7 +252,7 @@ const QuickStartSection = () => (
       Raw, Headers, and Cookies views.
     </Step>
     <Callout type="tip">
-      💡 The very first request automatically appears in your <strong>History</strong> panel on the left sidebar, so you can re-run it any time.
+      💡 Your request automatically appears in the <strong>History</strong> panel (left sidebar), so you can re-run it any time.
     </Callout>
   </div>
 );
@@ -229,9 +272,9 @@ const RequestsSection = () => (
         ['Params', 'Key-value query parameters appended to the URL automatically.'],
         ['Headers', 'Custom request headers. Enable/disable per row.'],
         ['Body', 'Send a JSON, form-data, raw text, or binary payload.'],
-        ['Auth', 'Add Bearer Token, Basic Auth, or API Key authentication.'],
-        ['Cookies', 'Manually set cookies sent with the request.'],
-        ['Settings', 'Per-request options: follow redirects, TLS verify, timeout.'],
+        ['Pre-request', 'Run JavaScript before a request is sent to modify data.'],
+        ['Tests', 'Write JavaScript assertions to validate response data.'],
+        ['Settings', 'Per-request options like timeout duration.'],
       ].map(([tab, desc]) => (
         <div key={tab} className="flex gap-3">
           <span className="text-indigo-400 font-semibold w-20 shrink-0">{tab}</span>
@@ -240,7 +283,7 @@ const RequestsSection = () => (
       ))}
     </div>
     <Callout type="info">
-      All request data is auto-saved to the local database. Unsaved changes are marked with a <strong>dot indicator</strong> on the tab title.
+      If auto-save is enabled, all request data is saved to the local database. Unsaved changes are marked with a <strong>dot indicator</strong> on the tab title.
     </Callout>
   </div>
 );
@@ -252,11 +295,10 @@ const CollectionsSection = () => (
     <p className="text-slate-400 mb-4">Collections are the core organisational unit in RequestLab. Each collection can contain requests and nested sub-folders.</p>
     {[
       ['Create', 'Click the + button in the Sidebar header or the "New Collection" button on the Dashboard.'],
-      ['Add a Request', 'Hover a collection row and click the + icon. Give the request a name; it opens as a new tab.'],
-      ['Rename', 'Double-click a collection or request name to rename it inline.'],
+      ['Add Request', 'Hover a collection row and click the + icon. Give the request a name; it opens as a new tab.'],
+      ['Rename', 'Hover a collection or request and click the pencil icon to rename it.'],
       ['Reorder', 'Drag a request to move it between collections or change its position.'],
-      ['Export', 'Right-click a collection → Export JSON to share or backup.'],
-      ['Import', 'Click the Import button in the Sidebar to load a previously exported JSON file.'],
+      ['Import/Export', 'Use the Import and Export buttons to backup or share collections as JSON files.'],
       ['Favourite', 'Star any collection to pin it to the Favourites counter on the Dashboard.'],
       ['Delete', 'Hover a row and click the trash icon. Deleting a collection removes all its requests.'],
     ].map(([action, desc]) => (
@@ -285,7 +327,7 @@ const EnvironmentsSection = () => (
       Click <strong className="text-slate-200">Add Environment</strong> and give it a name like <Code>Production</Code> or <Code>Staging</Code>.
     </Step>
     <Step n={3} title="Add variables">
-      In the right panel, add key-value pairs. Example: key = <Code>base_url</Code>, value = <Code>https://api.example.com</Code>.
+      In the right panel, add key-value pairs. Example: key = <Code>base_url</Code>, value = <Code>https://api.yourdomain.com</Code>.
     </Step>
     <Step n={4} title="Use in requests">
       In any URL, header, or body field type <Code>{"{{base_url}}"}</Code>. When you send the request, RequestLab replaces it with the variable value.

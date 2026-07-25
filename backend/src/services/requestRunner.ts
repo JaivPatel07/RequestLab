@@ -1,7 +1,26 @@
-import { Router, Request, Response } from 'express';
 import axios, { AxiosRequestConfig, Method } from 'axios';
-import { prisma } from '../database/db';
 import vm from 'vm';
+import { prisma } from '../database/db';
+
+type EnvironmentLike = {
+  active?: { variables?: string | Array<{ key: string; value: string; enabled: boolean }> } | null;
+  global?: { variables?: string | Array<{ key: string; value: string; enabled: boolean }> } | null;
+} | null;
+
+type RequestLike = {
+  method: string;
+  url: string;
+  headers: string;
+  params: string;
+  authType: string;
+  authConfig: string;
+  bodyType: string;
+  bodyContent: string | null;
+  cookies: string | null;
+  settings: string | null;
+  testScript?: string | null;
+  preRequestScript?: string | null;
+};
 
 class VM {
   private context: vm.Context;
@@ -18,62 +37,72 @@ class VM {
   }
 }
 
-export const proxyRouter = Router();
-
-// Helper to convert array of key-value-enabled objects to record
-const arrayToRecord = (arr: any[]): Record<string, string> => {
+const arrayToRecord = (value: any): Record<string, string> => {
   const record: Record<string, string> = {};
-  if (!Array.isArray(arr)) return record;
-  for (const item of arr) {
+  if (!Array.isArray(value)) return record;
+
+  for (const item of value) {
     if (item && item.enabled !== false && item.key) {
       record[item.key] = item.value || '';
     }
   }
+
   return record;
 };
 
-proxyRouter.post('/send', async (req: Request, res: Response) => {
-  const {
-    method = 'GET',
-    url,
-    headers = [],
-    params = [],
-    authType = 'none',
-    authConfig = '{}',
-    bodyType = 'none',
-    bodyContent,
-    cookies = [],
-    testScript = '',
-    preRequestScript = '',
-    settings = '{}'
-  } = req.body;
-
-  if (!url) {
-    return res.status(400).json({ error: 'URL is required' });
+const parseJson = <T>(value: unknown, fallback: T): T => {
+  if (typeof value !== 'string') {
+    return value as T;
   }
 
-  // Parse configurations
-  let parsedAuthConfig: any = {};
   try {
-    parsedAuthConfig = typeof authConfig === 'string' ? JSON.parse(authConfig) : authConfig;
-  } catch (e) {}
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+};
 
-  let parsedSettings: any = {};
-  try {
-    parsedSettings = typeof settings === 'string' ? JSON.parse(settings) : settings;
-  } catch (e) {}
+const buildVariableMap = (environment: EnvironmentLike): Record<string, string> => {
+  const map: Record<string, string> = {};
+  const sources = [environment?.global, environment?.active];
 
-  // --- PRE-REQUEST SCRIPT EXECUTION ---
+  for (const source of sources) {
+    if (!source?.variables) continue;
+
+    const variables = parseJson<Array<{ key: string; value: string; enabled: boolean }>>(source.variables, []);
+    for (const variable of variables) {
+      if (variable?.enabled !== false && variable?.key) {
+        map[variable.key] = variable.value || '';
+      }
+    }
+  }
+
+  return map;
+};
+
+const resolveTemplate = (text: string, varMap: Record<string, string>): string => {
+  if (!text) return '';
+  return text.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+    const trimmedKey = key.trim();
+    return trimmedKey in varMap ? varMap[trimmedKey] : match;
+  });
+};
+
+export const runRequest = async (request: RequestLike, environment: EnvironmentLike, collectionVariables: Record<string, any>) => {
+  const parsedAuthConfig = parseJson<Record<string, any>>(request.authConfig, {});
+  const parsedSettings = parseJson<Record<string, any>>(request.settings, {});
+  const varMap = { ...buildVariableMap(environment), ...collectionVariables };
+
   const requestData = {
-    headers: arrayToRecord(headers),
-    params: arrayToRecord(params),
-    body: bodyContent,
-    auth: parsedAuthConfig
+    headers: arrayToRecord(parseJson<any[]>(request.headers, [])),
+    params: arrayToRecord(parseJson<any[]>(request.params, [])),
+    body: request.bodyContent ?? '',
+    auth: parsedAuthConfig,
   };
 
-  if (preRequestScript) {
-    const vm = new VM({
-      timeout: 1000, // 1 second timeout
+  if (request.preRequestScript) {
+    const scriptVm = new VM({
+      timeout: 1000,
       sandbox: {
         pm: {
           setHeader: (key: string, value: string) => {
@@ -84,29 +113,27 @@ proxyRouter.post('/send', async (req: Request, res: Response) => {
           },
           setBody: (body: any) => {
             requestData.body = body;
-          }
-        }
-      }
+          },
+          variables: collectionVariables,
+        },
+      },
     });
 
     try {
-      vm.run(preRequestScript);
-    } catch (e: any) {
-      console.error('Pre-request script failed:', e.message);
-      // Optionally, you could stop execution and return an error to the user here.
+      scriptVm.run(request.preRequestScript);
+    } catch (error: any) {
+      console.error('Pre-request script failed:', error.message);
     }
   }
 
-  // Build Headers
   const requestHeaders = requestData.headers;
 
-  // Inject Authorization Headers
-  if (authType === 'bearer' && parsedAuthConfig.token) {
-    requestHeaders['Authorization'] = `Bearer ${parsedAuthConfig.token}`;
-  } else if (authType === 'basic' && (parsedAuthConfig.username || parsedAuthConfig.password)) {
+  if (request.authType === 'bearer' && parsedAuthConfig.token) {
+    requestHeaders.Authorization = `Bearer ${parsedAuthConfig.token}`;
+  } else if (request.authType === 'basic' && (parsedAuthConfig.username || parsedAuthConfig.password)) {
     const credentials = Buffer.from(`${parsedAuthConfig.username || ''}:${parsedAuthConfig.password || ''}`).toString('base64');
-    requestHeaders['Authorization'] = `Basic ${credentials}`;
-  } else if (authType === 'apikey' && parsedAuthConfig.key) {
+    requestHeaders.Authorization = `Basic ${credentials}`;
+  } else if (request.authType === 'apikey' && parsedAuthConfig.key) {
     const key = parsedAuthConfig.key;
     const value = parsedAuthConfig.value || '';
     if (parsedAuthConfig.addTo === 'headers') {
@@ -114,25 +141,23 @@ proxyRouter.post('/send', async (req: Request, res: Response) => {
     }
   }
 
-  // Inject Cookies Header
-  const cookieRecord = arrayToRecord(cookies);
+  const cookieRecord = arrayToRecord(parseJson<any[]>(request.cookies, []));
   const cookieString = Object.entries(cookieRecord)
-    .map(([k, v]) => `${k}=${v}`)
+    .map(([key, value]) => `${key}=${value}`)
     .join('; ');
   if (cookieString) {
-    requestHeaders['Cookie'] = cookieString;
+    requestHeaders.Cookie = cookieString;
   }
 
-  // Prepare Body
   let data: any = undefined;
-  if (bodyType !== 'none' && requestData.body) {
-    if (bodyType === 'json') {
+  if (request.bodyType !== 'none' && requestData.body) {
+    if (request.bodyType === 'json') {
       try {
         data = typeof requestData.body === 'string' ? JSON.parse(requestData.body) : requestData.body;
-      } catch (e) {
-        data = requestData.body; // fallback to raw string if invalid JSON
+      } catch {
+        data = requestData.body;
       }
-    } else if (bodyType === 'urlencoded') {
+    } else if (request.bodyType === 'urlencoded') {
       const urlencodedRecord = typeof requestData.body === 'string' ? JSON.parse(requestData.body) : requestData.body;
       const searchParams = new URLSearchParams();
       if (Array.isArray(urlencodedRecord)) {
@@ -142,80 +167,72 @@ proxyRouter.post('/send', async (req: Request, res: Response) => {
           }
         }
       } else if (typeof urlencodedRecord === 'object' && urlencodedRecord !== null) {
-        for (const [k, v] of Object.entries(urlencodedRecord as Record<string, any>)) {
-          searchParams.append(k, String(v));
+        for (const [key, value] of Object.entries(urlencodedRecord as Record<string, any>)) {
+          searchParams.append(key, String(value));
         }
       }
       data = searchParams.toString();
       requestHeaders['Content-Type'] = 'application/x-www-form-urlencoded';
-    } else if (bodyType === 'formdata') {
+    } else if (request.bodyType === 'formdata') {
       const formItems = typeof requestData.body === 'string' ? JSON.parse(requestData.body) : requestData.body;
-      // We will serialize multipart/form-data as key-value boundary body.
-      // For simple MVP text formdata, we can construct search parameters or boundary string.
-      // Axios natively handles key-value objects as multipart form-data if structured correctly,
-      // or we can form-encode it. Let's serialize as URLSearchParams or key-value object.
       const fd: Record<string, any> = {};
       if (Array.isArray(formItems)) {
-        for (const item of (formItems as any[])) {
+        for (const item of formItems) {
           if (item.enabled !== false && item.key) {
             fd[item.key] = item.value || '';
           }
         }
       }
       data = fd;
-      // Axios will add multipart boundary automatically when sending an object/FormData.
-    } else if (bodyType === 'text') {
-      data = requestData.body;
+    } else if (request.bodyType === 'text') {
+      data = resolveTemplate(String(requestData.body), varMap);
       if (!requestHeaders['Content-Type']) {
         requestHeaders['Content-Type'] = 'text/plain';
       }
-    } else if (bodyType === 'xml') {
-      data = requestData.body;
+    } else if (request.bodyType === 'xml') {
+      data = resolveTemplate(String(requestData.body), varMap);
       if (!requestHeaders['Content-Type']) {
         requestHeaders['Content-Type'] = 'application/xml';
       }
     }
   }
 
-  // Handle API key addition to params
   const requestParams = requestData.params;
-  if (authType === 'apikey' && parsedAuthConfig.key && parsedAuthConfig.addTo === 'params') {
+  if (request.authType === 'apikey' && parsedAuthConfig.key && parsedAuthConfig.addTo === 'params') {
     requestParams[parsedAuthConfig.key] = parsedAuthConfig.value || '';
   }
 
-  // Axios Request Config
   const timeout = Number(parsedSettings.timeout) || 30000;
   const config: AxiosRequestConfig = {
-    method: method as Method,
-    url,
+    method: request.method as Method,
+    url: resolveTemplate(request.url, varMap),
     headers: requestHeaders,
     params: requestParams,
     data,
     timeout,
-    validateStatus: () => true, // resolve promise for any status code
-    responseType: 'text' // get raw text to calculate exact size and handle multiple formats
+    validateStatus: () => true,
+    responseType: 'text',
   };
 
   const startTime = Date.now();
 
   try {
     const response = await axios(config);
-    const endTime = Date.now();
-    const duration = endTime - startTime;
+    const duration = Date.now() - startTime;
 
-    let responseBody = response.data;
+    const responseBody = response.data;
     const responseSize = typeof responseBody === 'string' ? Buffer.byteLength(responseBody) : JSON.stringify(responseBody).length;
 
-    // Check if JSON and try to parse it (so front-end can display collapsible viewer)
     let parsedBody = responseBody;
     try {
       parsedBody = JSON.parse(responseBody);
-    } catch (e) {}
+    } catch {
+      // Keep the raw body when it is not JSON.
+    }
 
-    // --- TEST SCRIPT EXECUTION ---
     const testResults: any[] = [];
-    if (testScript) {
-      const vm = new VM({
+    if (request.testScript) {
+      const testVm = new VM({
         timeout: 1000,
         sandbox: {
           response: {
@@ -228,17 +245,15 @@ proxyRouter.post('/send', async (req: Request, res: Response) => {
           },
           expect: (value: any) => ({
             toBe: (expected: any) => {
-              const pass = value === expected;
               testResults.push({
                 name: `Expected ${JSON.stringify(value)} to be ${JSON.stringify(expected)}`,
-                pass,
+                pass: value === expected,
               });
             },
             toBeDefined: () => {
-              const pass = value !== undefined && value !== null;
               testResults.push({
                 name: `Expected ${JSON.stringify(value)} to be defined`,
-                pass,
+                pass: value !== undefined && value !== null,
               });
             },
           }),
@@ -246,35 +261,33 @@ proxyRouter.post('/send', async (req: Request, res: Response) => {
       });
 
       try {
-        vm.run(testScript);
-      } catch (e: any) {
+        testVm.run(request.testScript);
+      } catch (error: any) {
         testResults.push({
-          name: `Test script execution failed: ${e.message}`,
+          name: `Test script execution failed: ${error.message}`,
           pass: false,
           isError: true,
         });
       }
     }
 
-    // Extract set-cookie headers
     const setCookieHeaders = response.headers['set-cookie'] || [];
 
-    // Save to request history
     await prisma.historyItem.create({
       data: {
-        method,
-        url,
+        method: request.method,
+        url: request.url,
         status: response.status,
         statusText: response.statusText || 'OK',
         duration,
         responseSize,
         responseBody: typeof responseBody === 'string' ? responseBody : JSON.stringify(responseBody),
         responseHeaders: JSON.stringify(response.headers),
-        cookies: JSON.stringify(setCookieHeaders)
-      }
+        cookies: JSON.stringify(setCookieHeaders),
+      },
     });
 
-    return res.json({
+    return {
       status: response.status,
       statusText: response.statusText,
       headers: response.headers,
@@ -283,31 +296,28 @@ proxyRouter.post('/send', async (req: Request, res: Response) => {
       size: responseSize,
       body: parsedBody,
       testResults,
-    });
+    };
   } catch (error: any) {
-    const endTime = Date.now();
-    const duration = endTime - startTime;
-
+    const duration = Date.now() - startTime;
     const errorMessage = error.message || 'Network error';
     const status = error.response?.status || 0;
     const statusText = error.code || 'ERROR';
 
-    // Log failed execution in history
     await prisma.historyItem.create({
       data: {
-        method,
-        url,
+        method: request.method,
+        url: request.url,
         status,
         statusText,
         duration,
         responseSize: Buffer.byteLength(errorMessage),
         responseBody: errorMessage,
         responseHeaders: JSON.stringify({}),
-        cookies: JSON.stringify([])
-      }
+        cookies: JSON.stringify([]),
+      },
     });
 
-    return res.status(200).json({
+    return {
       status,
       statusText,
       headers: {},
@@ -317,6 +327,6 @@ proxyRouter.post('/send', async (req: Request, res: Response) => {
       body: errorMessage,
       isError: true,
       testResults: [],
-    });
+    };
   }
-});
+};

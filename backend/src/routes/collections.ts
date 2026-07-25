@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../database/db';
+import { runRequest } from '../services/requestRunner';
 
 export const collectionsRouter = Router();
 
@@ -209,6 +210,104 @@ collectionsRouter.post('/requests/:id/duplicate', async (req: Request, res: Resp
     });
 
     return res.json(duplicatedRequest);
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// Duplicate Collection
+collectionsRouter.post('/:id/duplicate', async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const duplicateCollectionRecursive = async (collectionId: string, newParentId: string | null) => {
+      const originalCollection = await prisma.collection.findUnique({
+        where: { id: collectionId },
+        include: { requests: true },
+      });
+
+      if (!originalCollection) return;
+
+      // 1. Duplicate the collection/folder itself
+      const newCollection = await prisma.collection.create({
+        data: {
+          name: `${originalCollection.name} (Copy)`,
+          parentId: newParentId,
+          isFavorite: false, // Duplicates are not favorited by default
+        },
+      });
+
+      // 2. Duplicate all requests within this collection/folder
+      if (originalCollection.requests.length > 0) {
+        const requestsToCreate = originalCollection.requests.map(req => ({
+          ...req,
+          id: undefined, // Let prisma generate a new ID
+          collectionId: newCollection.id,
+        }));
+        await prisma.request.createMany({
+          data: requestsToCreate,
+        });
+      }
+
+      // 3. Find and recursively duplicate sub-folders
+      const subFolders = await prisma.collection.findMany({
+        where: { parentId: collectionId },
+      });
+
+      for (const subFolder of subFolders) {
+        await duplicateCollectionRecursive(subFolder.id, newCollection.id);
+      }
+    };
+
+    // Start the process from the root collection ID
+    const originalCollection = await prisma.collection.findUnique({ where: { id } });
+    if (originalCollection) {
+      await duplicateCollectionRecursive(id, originalCollection.parentId);
+    }
+
+    return res.status(201).json({ success: true });
+  } catch (error: any) {
+    return res.status(500).json({ error: 'Failed to duplicate collection: ' + error.message });
+  }
+});
+
+// Run Collection
+collectionsRouter.post('/:id/run', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { environment } = req.body; // Pass active environment from client
+
+  try {
+    const collection = await prisma.collection.findUnique({
+      where: { id },
+      include: {
+        requests: {
+          orderBy: { order: 'asc' }
+        }
+      }
+    });
+
+    if (!collection) {
+      return res.status(404).json({ error: 'Collection not found' });
+    }
+
+    const runResults = [];
+    const collectionVariables: Record<string, any> = {}; // Shared context for the run
+
+    for (const request of collection.requests) {
+      const result = await runRequest(request, environment, collectionVariables);
+      runResults.push(result);
+
+      // If a request fails critically (e.g., script error), we might want to stop the run.
+      // For now, we'll continue running all requests.
+    }
+
+    const summary = {
+      total: runResults.length,
+      passed: runResults.filter((r: any) => r.tests.every((t: { pass: boolean; }) => t.pass)).length,
+      failed: runResults.filter((r: any) => r.tests.some((t: { pass: boolean; }) => !t.pass)).length,
+    };
+
+    return res.json({ summary, results: runResults });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
   }
