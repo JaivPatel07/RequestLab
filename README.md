@@ -2,7 +2,7 @@
 
 A local-first, open-source API client built for speed, privacy, and a modern developer experience. RequestLab runs entirely on your machine, ensuring that all your requests, collections, and environment data never leave your computer.
 
-![RequestLab Screenshot]![alt text](image.png)
+![alt text](image.png)
 
 ## Features
 
