@@ -2,19 +2,21 @@ import React from 'react';
 import { useStore } from '../store/useStore';
 import {
   Plus, History, Settings, Folder, Star, Zap, Terminal,
-  Globe, ArrowRight, Activity, BookOpen
+  Globe, ArrowRight, Activity, BookOpen, FlaskConical
 } from 'lucide-react';
 
 interface DashboardProps {
   onOpenSettings: () => void;
   onCreateCollection: () => void;
   onOpenDocs?: () => void;
+  onOpenExamples?: () => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
   onOpenSettings,
   onCreateCollection,
-  onOpenDocs
+  onOpenDocs,
+  onOpenExamples
 }) => {
   const { collections, history, addTab } = useStore();
 
@@ -56,6 +58,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
       accent: 'sky',
       onClick: onOpenDocs,
     },
+    {
+      icon: FlaskConical,
+      label: 'Examples',
+      sub: 'How to test every feature',
+      accent: 'emerald',
+      onClick: onOpenExamples,
+    },
   ];
 
   const accentMap: Record<string, { icon: string; btn: string }> = {
@@ -63,6 +72,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     purple: { icon: 'bg-purple-500/12 text-purple-400 group-hover:bg-purple-500 group-hover:text-white',  btn: 'hover:border-purple-500/40' },
     rose:   { icon: 'bg-rose-500/12   text-rose-400   group-hover:bg-rose-500   group-hover:text-white',   btn: 'hover:border-rose-500/40'   },
     sky:    { icon: 'bg-sky-500/12    text-sky-400    group-hover:bg-sky-500    group-hover:text-white',    btn: 'hover:border-sky-500/40'    },
+    emerald:{ icon: 'bg-emerald-500/12 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white', btn: 'hover:border-emerald-500/40'  },
   };
 
   const methodColor = (method: string) => {

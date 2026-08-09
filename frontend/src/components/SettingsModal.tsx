@@ -92,7 +92,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           <div className="flex items-start gap-2.5 p-3.5 bg-indigo-500/5 border border-indigo-500/10 rounded-lg text-xs text-slate-400">
             <Info size={15} className="text-indigo-400 shrink-0 mt-0.5" />
             <p>
-              Proxy execution is processed locally on <code className="text-indigo-300">http://localhost:5000</code>. This avoids CORS blocks when calling third-party services.
+              Proxy execution is processed locally on <code className="text-indigo-300">http://localhost:5050</code>. This avoids CORS blocks when calling third-party services.
             </p>
           </div>
         </div>

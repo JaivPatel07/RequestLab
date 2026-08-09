@@ -447,7 +447,7 @@ export const useStore = create<RequestLabState>((set, get) => {
           cookies: resolvedCookies,
           testScript: tab.testScript,
           preRequestScript: tab.preRequestScript,
-          settings: JSON.stringify({ ...tab.settings, timeout: state.settings.timeout })
+          settings: JSON.stringify({ ...tab.settings, timeout: tab.settings?.timeout ?? state.settings.timeout })
         });
 
         // Refresh History

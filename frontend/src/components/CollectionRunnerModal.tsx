@@ -102,8 +102,9 @@ export const CollectionRunnerModal: React.FC = () => {
               <div className="space-y-2">
                 {results.results.map((res: any, index: number) => {
                   const req = collection.requests.find(r => r.id === res.requestId);
-                  const testsPassed = res.tests.filter((t: any) => t.pass).length;
-                  const allTestsPassed = testsPassed === res.tests.length;
+                  const tests = res.testResults || [];
+                  const testsPassed = tests.filter((t: any) => t.pass).length;
+                  const allTestsPassed = testsPassed === tests.length;
 
                   return (
                     <div key={index} className="bg-slate-900/50 border border-slate-800 rounded-lg">
@@ -129,11 +130,11 @@ export const CollectionRunnerModal: React.FC = () => {
                       {expandedRequests[res.requestId] && (
                         <div className="px-3 pb-3 border-t border-slate-800">
                           <h4 className="text-xs font-semibold text-slate-400 my-2 flex items-center gap-1.5">
-                            <TestTube2 size={13} /> Test Results ({testsPassed}/{res.tests.length})
+                            <TestTube2 size={13} /> Test Results ({testsPassed}/{tests.length})
                           </h4>
-                          {res.tests.length > 0 ? (
+                          {tests.length > 0 ? (
                             <div className="space-y-1 pl-4">
-                              {res.tests.map((test: any, i: number) => (
+                              {tests.map((test: any, i: number) => (
                                 <div key={i} className={`flex items-center gap-2 text-xs ${test.pass ? 'text-emerald-400' : 'text-rose-400'}`}>
                                   {test.pass ? <CheckCircle size={12} /> : <XCircle size={12} />}
                                   <span>{test.name}</span>

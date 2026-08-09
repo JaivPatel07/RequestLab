@@ -8,6 +8,7 @@ type EnvironmentLike = {
 } | null;
 
 type RequestLike = {
+  id: string;
   method: string;
   url: string;
   headers: string;
@@ -288,6 +289,7 @@ export const runRequest = async (request: RequestLike, environment: EnvironmentL
     });
 
     return {
+      requestId: request.id,
       status: response.status,
       statusText: response.statusText,
       headers: response.headers,
@@ -318,6 +320,7 @@ export const runRequest = async (request: RequestLike, environment: EnvironmentL
     });
 
     return {
+      requestId: request.id,
       status,
       statusText,
       headers: {},

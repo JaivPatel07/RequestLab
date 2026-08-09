@@ -355,39 +355,6 @@ export const ResponsePanel: React.FC = () => {
           </div>
         )}
 
-        {/* 4. TEST RESULTS */}
-        {activeSubTab === 'testresults' && (
-          <div>
-            {testResults.length === 0 ? (
-              <div className="text-center py-8 text-xs text-slate-500">
-                No tests were run for this request.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {testResults.map((result: any, index: number) => (
-                  <div
-                    key={index}
-                    className={`flex items-center gap-3 p-3 rounded-lg border text-xs ${
-                      result.pass
-                        ? 'bg-emerald-950/40 border-emerald-500/20 text-emerald-300'
-                        : 'bg-rose-950/40 border-rose-500/20 text-rose-300'
-                    }`}
-                  >
-                    {result.isError ? (
-                      <ShieldAlert size={14} className="text-amber-400 shrink-0" />
-                    ) : result.pass ? (
-                      <CheckCircle size={14} className="text-emerald-400 shrink-0" />
-                    ) : (
-                      <XCircle size={14} className="text-rose-400 shrink-0" />
-                    )}
-                    <span className="font-medium">{result.name}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
         {/* 4. CODE SNIPPETS */}
         {activeSubTab === 'codegen' && (
           <div className="flex-1 flex flex-col space-y-3 h-full">

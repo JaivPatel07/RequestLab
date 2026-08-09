@@ -303,8 +303,8 @@ collectionsRouter.post('/:id/run', async (req: Request, res: Response) => {
 
     const summary = {
       total: runResults.length,
-      passed: runResults.filter((r: any) => r.tests.every((t: { pass: boolean; }) => t.pass)).length,
-      failed: runResults.filter((r: any) => r.tests.some((t: { pass: boolean; }) => !t.pass)).length,
+      passed: runResults.filter((r: any) => r.testResults.every((t: { pass: boolean; }) => t.pass)).length,
+      failed: runResults.filter((r: any) => r.testResults.some((t: { pass: boolean; }) => !t.pass)).length,
     };
 
     return res.json({ summary, results: runResults });

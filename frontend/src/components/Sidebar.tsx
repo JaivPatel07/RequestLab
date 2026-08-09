@@ -15,7 +15,8 @@ import {
   Sparkles,
   Copy,
   BookOpen,
-  Play
+  Play,
+  FlaskConical
 } from 'lucide-react';
 import { Collection } from '../types';
 
@@ -23,9 +24,10 @@ interface SidebarProps {
   onOpenSettings: () => void;
   onOpenEnvironments: () => void;
   onOpenDocs: () => void;
+  onOpenExamples: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenEnvironments, onOpenDocs }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenEnvironments, onOpenDocs, onOpenExamples }) => {
   const {
     collections,
     addCollection,
@@ -288,6 +290,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenEnvironm
             className="p-1.5 rounded-md hover:bg-slate-800/60 text-slate-400 hover:text-indigo-400 transition-colors"
           >
             <BookOpen size={15} />
+          </button>
+          <button
+            onClick={onOpenExamples}
+            title="Examples & How to Test"
+            className="p-1.5 rounded-md hover:bg-slate-800/60 text-slate-400 hover:text-sky-400 transition-colors"
+          >
+            <FlaskConical size={15} />
           </button>
           <button
             onClick={onOpenSettings}

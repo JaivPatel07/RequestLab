@@ -10,6 +10,7 @@ import { EnvironmentModal } from './components/EnvironmentModal';
 import { CommandPalette } from './components/CommandPalette';
 import { CollectionRunnerModal } from './components/CollectionRunnerModal';
 import { DocsModal } from './components/DocsModal';
+import { ExamplesPage } from './components/ExamplesPage';
 import { FloatingNav } from './components/FloatingNav';
 import { Footer } from './components/Footer';
 
@@ -28,6 +29,7 @@ const App: React.FC = () => {
   const [isEnvironmentsOpen, setIsEnvironmentsOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isDocsOpen, setIsDocsOpen] = useState(false);
+  const [isExamplesOpen, setIsExamplesOpen] = useState(false);
 
   // Load initial data
   useEffect(() => {
@@ -100,18 +102,22 @@ const App: React.FC = () => {
             onOpenSettings={() => setIsSettingsOpen(true)}
             onOpenEnvironments={() => setIsEnvironmentsOpen(true)}
             onOpenDocs={() => setIsDocsOpen(true)}
+            onOpenExamples={() => setIsExamplesOpen(true)}
           />
         </Panel>
 
         <PanelResizeHandle className="w-1 bg-[#121217] hover:bg-indigo-500 cursor-col-resize transition-all" />
 
-        {/* Right side: Editor + Response OR Dashboard */}
+        {/* Right side: Editor + Response OR Dashboard OR Examples */}
         <Panel defaultSize={80}>
-          {tabs.length === 0 ? (
+          {isExamplesOpen ? (
+            <ExamplesPage onClose={() => setIsExamplesOpen(false)} />
+          ) : tabs.length === 0 ? (
             <Dashboard
               onOpenSettings={() => setIsSettingsOpen(true)}
               onCreateCollection={handleCreateCollectionFromDashboard}
               onOpenDocs={() => setIsDocsOpen(true)}
+              onOpenExamples={() => setIsExamplesOpen(true)}
             />
           ) : (
             <PanelGroup direction="horizontal" className="h-full w-full">
@@ -147,11 +153,16 @@ const App: React.FC = () => {
           setIsCommandPaletteOpen(false);
           await handleCreateCollectionFromDashboard();
         }}
+        onOpenExamples={() => {
+          setIsCommandPaletteOpen(false);
+          setIsExamplesOpen(true);
+        }}
       />
       <FloatingNav
         onOpenDocs={() => setIsDocsOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onCreateCollection={handleCreateCollectionFromDashboard}
+        onOpenExamples={() => setIsExamplesOpen(true)}
       />
       <Footer />
     </div>

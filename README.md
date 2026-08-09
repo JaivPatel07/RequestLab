@@ -56,7 +56,7 @@ Follow these steps to get RequestLab running on your local machine.
     ```
 
 4.  **Open the app:**
-    Navigate to `http://localhost:5173` (or the port specified by Vite) in your browser. The backend proxy will be running on `http://localhost:5050`.
+    Navigate to `http://localhost:3000` (or the port specified by Vite) in your browser. The backend proxy will be running on `http://localhost:5050`.
 
 ## Quick Start
 

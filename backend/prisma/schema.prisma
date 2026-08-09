@@ -59,5 +59,6 @@ model HistoryItem {
   responseBody    String?
   responseHeaders String?  // JSON string of response headers
   cookies         String?  // JSON string of cookies
+  isFavorite      Boolean  @default(false)
   createdAt       DateTime @default(now())
 }

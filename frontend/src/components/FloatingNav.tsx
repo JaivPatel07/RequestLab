@@ -1,19 +1,22 @@
 import React from 'react';
-import { BookOpen, Settings, FolderPlus } from 'lucide-react';
+import { BookOpen, Settings, FolderPlus, FlaskConical } from 'lucide-react';
 
 interface FloatingNavProps {
   onOpenDocs: () => void;
   onOpenSettings: () => void;
   onCreateCollection: () => void;
+  onOpenExamples: () => void;
 }
 
 export const FloatingNav: React.FC<FloatingNavProps> = ({
   onOpenDocs,
   onOpenSettings,
   onCreateCollection,
+  onOpenExamples,
 }) => {
   const navItems = [
     { label: 'Docs', icon: BookOpen, action: onOpenDocs },
+    { label: 'Examples', icon: FlaskConical, action: onOpenExamples },
     { label: 'Settings', icon: Settings, action: onOpenSettings },
     { label: 'New Collection', icon: FolderPlus, action: onCreateCollection },
   ];
