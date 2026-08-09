@@ -3,6 +3,12 @@ import axios from 'axios';
 import { Collection, Environment, HistoryItem, RequestTab, RequestItem, KeyValuePair } from '../types';
 import { getVariableMap, resolveTemplate } from '../utils/variables';
 
+export interface ToastMessage {
+  id: string;
+  type: 'success' | 'error' | 'info';
+  message: string;
+}
+
 interface RequestLabState {
   collections: Collection[];
   history: HistoryItem[];
@@ -16,10 +22,16 @@ interface RequestLabState {
     wordWrap: boolean;
     timeout: number;
   };
-  runnerState: {
+runnerState: {
     isOpen: boolean;
     isRunning: boolean;
     collectionId: string | null;
+    results: any | null;
+  };
+  toasts: ToastMessage[];
+  loadTestState: {
+    isOpen: boolean;
+    isRunning: boolean;
     results: any | null;
   };
 
@@ -66,6 +78,15 @@ interface RequestLabState {
   openRunner: (collectionId: string) => void;
   closeRunner: () => void;
   runCollection: (collectionId:string) => Promise<void>;
+
+  // Toast actions
+  showToast: (message: string, type?: ToastMessage['type']) => void;
+  dismissToast: (id: string) => void;
+
+  // Load Test actions
+  openLoadTest: () => void;
+  closeLoadTest: () => void;
+  runLoadTest: (config: Partial<RequestTab> & { users: number; concurrency: number }) => Promise<void>;
 }
 
 const DEFAULT_TAB = (id: string): RequestTab => ({
@@ -106,10 +127,16 @@ export const useStore = create<RequestLabState>((set, get) => {
     tabs: [],
     activeTabId: null,
     settings: initialSettings,
-    runnerState: {
+runnerState: {
       isOpen: false,
       isRunning: false,
       collectionId: null,
+      results: null,
+    },
+    toasts: [],
+    loadTestState: {
+      isOpen: false,
+      isRunning: false,
       results: null,
     },
 
@@ -510,10 +537,70 @@ export const useStore = create<RequestLabState>((set, get) => {
           }
         });
 
-        set({ runnerState: { ...state.runnerState, isRunning: false, results: response.data } });
+set({ runnerState: { ...state.runnerState, isRunning: false, results: response.data } });
       } catch (error) {
         console.error('Collection run failed', error);
         set({ runnerState: { ...state.runnerState, isRunning: false } });
+      }
+    },
+
+    // Toasts
+    showToast: (message, type = 'info') => {
+      const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      const toast: ToastMessage = { id, type, message };
+      set({ toasts: [...get().toasts, toast] });
+      // Auto-dismiss after 3.5 seconds
+      setTimeout(() => {
+        get().dismissToast(id);
+      }, 3500);
+    },
+    dismissToast: (id) => {
+      set({ toasts: get().toasts.filter(t => t.id !== id) });
+    },
+
+    // Load Test
+    openLoadTest: () => {
+      set({ loadTestState: { isOpen: true, isRunning: false, results: null } });
+    },
+    closeLoadTest: () => {
+      set({ loadTestState: { isOpen: false, isRunning: false, results: null } });
+    },
+    runLoadTest: async (config) => {
+      const state = get();
+      set({ loadTestState: { ...state.loadTestState, isRunning: true, results: null } });
+
+      // Resolve environment variables
+      const activeEnv = state.environments.find(e => e.id === state.activeEnvironmentId) || null;
+      const globalEnv = state.environments.find(e => e.isGlobal) || null;
+      const varMap = getVariableMap(activeEnv, globalEnv);
+
+      const resolvePairs = (list: KeyValuePair[]): KeyValuePair[] =>
+        list.map(it => ({ ...it, key: resolveTemplate(it.key, varMap), value: resolveTemplate(it.value, varMap) }));
+
+      const resolvedAuthConfig = { ...config.authConfig };
+      if (resolvedAuthConfig.token) resolvedAuthConfig.token = resolveTemplate(resolvedAuthConfig.token, varMap);
+
+      try {
+        const response = await axios.post('/api/proxy/load-test', {
+          method: config.method,
+          url: resolveTemplate(config.url || '', varMap),
+          headers: resolvePairs(config.headers || []),
+          params: resolvePairs(config.params || []),
+          authType: config.authType || 'none',
+          authConfig: JSON.stringify(resolvedAuthConfig),
+          bodyType: config.bodyType || 'none',
+          bodyContent: config.bodyContent || '',
+          cookies: resolvePairs(config.cookies || []),
+          users: config.users,
+          concurrency: config.concurrency,
+        });
+
+        set({ loadTestState: { ...get().loadTestState, isRunning: false, results: response.data } });
+        get().showToast(`Load test complete: ${response.data.summary.totalRequests} requests in ${response.data.summary.totalTimeMs}ms`, 'success');
+      } catch (error: any) {
+        console.error('Load test failed', error);
+        set({ loadTestState: { ...get().loadTestState, isRunning: false } });
+        get().showToast(error.message || 'Load test failed', 'error');
       }
     },
 

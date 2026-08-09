@@ -25,6 +25,7 @@ const kvList = (...pairs: [string, string, boolean?][]): KeyValuePair[] =>
 
 /* ─────────────────────────────────────────────────────────────────
    All examples. Each is a ready-to-load RequestTab partial.
+   Uses https://postman-echo.com — a fast, reliable public echo API.
    ───────────────────────────────────────────────────────────────── */
 const sections: { title: string; icon: React.ElementType; desc: string; examples: ExampleDef[] }[] = [
   {
@@ -37,8 +38,8 @@ const sections: { title: string; icon: React.ElementType; desc: string; examples
         title: 'GET — Retrieve data',
         description: 'Fetch a resource from the server. This returns JSON you can inspect in Pretty view.',
         method: 'GET',
-        tab: { method: 'GET', url: 'https://httpbin.org/get', bodyType: 'none', bodyContent: '' },
-        code: 'GET https://httpbin.org/get',
+        tab: { method: 'GET', url: 'https://postman-echo.com/get', bodyType: 'none', bodyContent: '' },
+        code: 'GET https://postman-echo.com/get',
       },
       {
         id: 'post',
@@ -47,11 +48,11 @@ const sections: { title: string; icon: React.ElementType; desc: string; examples
         method: 'POST',
         tab: {
           method: 'POST',
-          url: 'https://httpbin.org/post',
+          url: 'https://postman-echo.com/post',
           bodyType: 'json',
           bodyContent: '{\n  "name": "Jaiv",\n  "role": "developer",\n  "active": true\n}',
         },
-        code: `POST https://httpbin.org/post
+        code: `POST https://postman-echo.com/post
 Content-Type: application/json
 
 {
@@ -67,11 +68,11 @@ Content-Type: application/json
         method: 'PUT',
         tab: {
           method: 'PUT',
-          url: 'https://httpbin.org/put',
+          url: 'https://postman-echo.com/put',
           bodyType: 'json',
           bodyContent: '{\n  "id": 42,\n  "name": "Updated Name"\n}',
         },
-        code: `PUT https://httpbin.org/put
+        code: `PUT https://postman-echo.com/put
 Content-Type: application/json
 
 {
@@ -86,11 +87,11 @@ Content-Type: application/json
         method: 'PATCH',
         tab: {
           method: 'PATCH',
-          url: 'https://httpbin.org/patch',
+          url: 'https://postman-echo.com/patch',
           bodyType: 'json',
           bodyContent: '{\n  "status": "active"\n}',
         },
-        code: `PATCH https://httpbin.org/patch
+        code: `PATCH https://postman-echo.com/patch
 Content-Type: application/json
 
 {
@@ -102,16 +103,16 @@ Content-Type: application/json
         title: 'DELETE — Remove a resource',
         description: 'Delete a resource by its identifier.',
         method: 'DELETE',
-        tab: { method: 'DELETE', url: 'https://httpbin.org/delete', bodyType: 'none', bodyContent: '' },
-        code: 'DELETE https://httpbin.org/delete',
+        tab: { method: 'DELETE', url: 'https://postman-echo.com/delete', bodyType: 'none', bodyContent: '' },
+        code: 'DELETE https://postman-echo.com/delete',
       },
       {
         id: 'options',
         title: 'OPTIONS — Inspect CORS',
         description: 'Ask the server which methods and headers are allowed.',
         method: 'OPTIONS',
-        tab: { method: 'OPTIONS', url: 'https://httpbin.org/anything', bodyType: 'none', bodyContent: '' },
-        code: 'OPTIONS https://httpbin.org/anything',
+        tab: { method: 'OPTIONS', url: 'https://postman-echo.com/get', bodyType: 'none', bodyContent: '' },
+        code: 'OPTIONS https://postman-echo.com/get',
       },
     ],
   },
@@ -127,11 +128,11 @@ Content-Type: application/json
         method: 'GET',
         tab: {
           method: 'GET',
-          url: 'https://httpbin.org/anything/search',
+          url: 'https://postman-echo.com/get',
           params: kvList(['q', 'requestlab'], ['page', '2'], ['limit', '25'], ['sort', 'desc']),
           bodyType: 'none',
         },
-        code: `GET https://httpbin.org/anything/search
+        code: `GET https://postman-echo.com/get
     ?q=requestlab
     &page=2
     &limit=25
@@ -151,7 +152,7 @@ Content-Type: application/json
         method: 'GET',
         tab: {
           method: 'GET',
-          url: 'https://httpbin.org/headers',
+          url: 'https://postman-echo.com/headers',
           headers: kvList(
             ['Accept', 'application/json'],
             ['X-Custom-Header', 'requestlab-example'],
@@ -159,7 +160,7 @@ Content-Type: application/json
           ),
           bodyType: 'none',
         },
-        code: `GET https://httpbin.org/headers
+        code: `GET https://postman-echo.com/headers
 Accept: application/json
 X-Custom-Header: requestlab-example
 User-Agent: RequestLab/1.0`,
@@ -178,11 +179,11 @@ User-Agent: RequestLab/1.0`,
         method: 'POST',
         tab: {
           method: 'POST',
-          url: 'https://httpbin.org/post',
+          url: 'https://postman-echo.com/post',
           bodyType: 'json',
           bodyContent: '{\n  "user": {\n    "name": "Ada",\n    "email": "ada@example.com"\n  },\n  "tags": ["dev", "api"]\n}',
         },
-        code: `POST https://httpbin.org/post
+        code: `POST https://postman-echo.com/post
 Content-Type: application/json
 
 {
@@ -200,7 +201,7 @@ Content-Type: application/json
         method: 'POST',
         tab: {
           method: 'POST',
-          url: 'https://httpbin.org/post',
+          url: 'https://postman-echo.com/post',
           bodyType: 'xml',
           bodyContent: `<?xml version="1.0" encoding="UTF-8"?>
 <note>
@@ -209,7 +210,7 @@ Content-Type: application/json
   <message>Hello from XML!</message>
 </note>`,
         },
-        code: `POST https://httpbin.org/post
+        code: `POST https://postman-echo.com/post
 Content-Type: application/xml
 
 <?xml version="1.0" encoding="UTF-8"?>
@@ -226,11 +227,11 @@ Content-Type: application/xml
         method: 'POST',
         tab: {
           method: 'POST',
-          url: 'https://httpbin.org/post',
+          url: 'https://postman-echo.com/post',
           bodyType: 'formdata',
           bodyContent: JSON.stringify(kvList(['username', 'jaiv'], ['avatar', 'myfile.png'], ['remember', 'true'])),
         },
-        code: `POST https://httpbin.org/post
+        code: `POST https://postman-echo.com/post
 Content-Type: multipart/form-data
 
 username=jaiv
@@ -244,11 +245,11 @@ remember=true`,
         method: 'POST',
         tab: {
           method: 'POST',
-          url: 'https://httpbin.org/post',
+          url: 'https://postman-echo.com/post',
           bodyType: 'urlencoded',
           bodyContent: JSON.stringify(kvList(['email', 'user@example.com'], ['password', 'secret123'], ['remember', 'on'])),
         },
-        code: `POST https://httpbin.org/post
+        code: `POST https://postman-echo.com/post
 Content-Type: application/x-www-form-urlencoded
 
 email=user%40example.com&password=secret123&remember=on`,
@@ -260,11 +261,11 @@ email=user%40example.com&password=secret123&remember=on`,
         method: 'POST',
         tab: {
           method: 'POST',
-          url: 'https://httpbin.org/post',
+          url: 'https://postman-echo.com/post',
           bodyType: 'text',
           bodyContent: 'Hello RequestLab! This is a raw text body.',
         },
-        code: `POST https://httpbin.org/post
+        code: `POST https://postman-echo.com/post
 Content-Type: text/plain
 
 Hello RequestLab! This is a raw text body.`,
@@ -283,7 +284,7 @@ Hello RequestLab! This is a raw text body.`,
         method: 'GET',
         tab: {
           method: 'GET',
-          url: 'https://httpbin.org/bearer',
+          url: 'https://postman-echo.com/bearer',
           authType: 'bearer',
           authConfig: { token: '{{token}}' },
           headers: kvList(['Accept', 'application/json']),
@@ -298,12 +299,12 @@ Hello RequestLab! This is a raw text body.`,
         method: 'GET',
         tab: {
           method: 'GET',
-          url: 'https://httpbin.org/basic-auth/user/pass123',
+          url: 'https://postman-echo.com/basic-auth',
           authType: 'basic',
-          authConfig: { username: 'user', password: 'pass123' },
+          authConfig: { username: 'postman', password: 'password' },
           bodyType: 'none',
         },
-        code: 'Authorization: Basic base64(user:pass123)',
+        code: 'Authorization: Basic base64(postman:password)',
       },
       {
         id: 'auth-apikey',
@@ -312,7 +313,7 @@ Hello RequestLab! This is a raw text body.`,
         method: 'GET',
         tab: {
           method: 'GET',
-          url: 'https://httpbin.org/headers',
+          url: 'https://postman-echo.com/headers',
           authType: 'apikey',
           authConfig: { key: 'X-API-Key', value: 'sk_live_123456', addTo: 'headers' },
           bodyType: 'none',
@@ -326,12 +327,12 @@ Hello RequestLab! This is a raw text body.`,
         method: 'GET',
         tab: {
           method: 'GET',
-          url: 'https://httpbin.org/anything',
+          url: 'https://postman-echo.com/get',
           authType: 'apikey',
           authConfig: { key: 'api_key', value: 'abcd1234', addTo: 'params' },
           bodyType: 'none',
         },
-        code: 'GET https://httpbin.org/anything?api_key=abcd1234',
+        code: 'GET https://postman-echo.com/get?api_key=abcd1234',
       },
     ],
   },
@@ -347,7 +348,7 @@ Hello RequestLab! This is a raw text body.`,
         method: 'GET',
         tab: {
           method: 'GET',
-          url: 'https://httpbin.org/cookies',
+          url: 'https://postman-echo.com/cookies',
           cookies: kvList(['session_id', 'abc123'], ['theme', 'dark']),
           bodyType: 'none',
         },
@@ -367,19 +368,19 @@ Hello RequestLab! This is a raw text body.`,
         method: 'GET',
         tab: {
           method: 'GET',
-          url: 'https://httpbin.org/post',
+          url: 'https://postman-echo.com/post',
           authType: 'bearer',
           authConfig: { token: '{{token}}' },
           bodyType: 'json',
           bodyContent: '{\n  "endpoint": "{{base_url}}",\n  "created": true\n}',
           headers: kvList(['Accept', 'application/json']),
         },
-        code: `URL   : https://httpbin.org/post
+        code: `URL   : https://postman-echo.com/post
 Auth  : Bearer {{token}}
 Body  : { "endpoint": "{{base_url}}", "created": true }
 
 Create an Environment with:
-  base_url = https://httpbin.org
+  base_url = https://postman-echo.com
   token    = my-secret-token`,
       },
     ],
@@ -396,7 +397,7 @@ Create an Environment with:
         method: 'GET',
         tab: {
           method: 'GET',
-          url: 'https://httpbin.org/anything',
+          url: 'https://postman-echo.com/get',
           headers: kvList(['Accept', 'application/json']),
           bodyType: 'none',
           preRequestScript: `// Runs BEFORE the request is sent
@@ -424,18 +425,18 @@ pm.setBody({ hello: 'world' });`,
         method: 'GET',
         tab: {
           method: 'GET',
-          url: 'https://httpbin.org/get',
+          url: 'https://postman-echo.com/get',
           headers: kvList(['Accept', 'application/json']),
           bodyType: 'none',
           testScript: `// Runs AFTER the response is received
 expect(response.status).toBe(200);
 expect(response.body.url).toBeDefined();
-expect(response.body.origin).toBeDefined();
+expect(response.body.args).toBeDefined();
 expect(response.headers['content-type']).toBeDefined();`,
         },
         code: `expect(response.status).toBe(200);
 expect(response.body.url).toBeDefined();
-expect(response.body.origin).toBeDefined();
+expect(response.body.args).toBeDefined();
 expect(response.headers['content-type']).toBeDefined();`,
       },
       {
@@ -445,7 +446,7 @@ expect(response.headers['content-type']).toBeDefined();`,
         method: 'POST',
         tab: {
           method: 'POST',
-          url: 'https://httpbin.org/post',
+          url: 'https://postman-echo.com/post',
           bodyType: 'json',
           bodyContent: '{\n  "id": 7,\n  "status": "success"\n}',
           headers: kvList(['Accept', 'application/json']),
@@ -472,11 +473,11 @@ expect(response.body.json.status).toBe('success');`,
         method: 'GET',
         tab: {
           method: 'GET',
-          url: 'https://httpbin.org/delay/1',
+          url: 'https://postman-echo.com/delay/1',
           bodyType: 'none',
           settings: { timeout: 5000 },
         },
-        code: 'timeout: 5000ms  (https://httpbin.org/delay/1 responds after 1s)',
+        code: 'timeout: 5000ms  (postman-echo.com/delay/1 responds after 1s)',
       },
     ],
   },
@@ -672,4 +673,3 @@ export const ExamplesPage: React.FC<ExamplesPageProps> = ({ onClose }) => {
     </div>
   );
 };
-

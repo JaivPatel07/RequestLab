@@ -306,7 +306,7 @@ proxyRouter.post('/send', async (req: Request, res: Response) => {
       }
     });
 
-    return res.status(200).json({
+return res.status(200).json({
       status,
       statusText,
       headers: {},
@@ -318,4 +318,149 @@ proxyRouter.post('/send', async (req: Request, res: Response) => {
       testResults: [],
     });
   }
+});
+
+// ─── LOAD TEST (concurrent virtual-users) ─────────────────────────────
+// Fires `users` concurrent requests to the same target and returns stats.
+proxyRouter.post('/load-test', async (req: Request, res: Response) => {
+  const {
+    method = 'GET',
+    url,
+    headers = [],
+    params = [],
+    authType = 'none',
+    authConfig = '{}',
+    bodyType = 'none',
+    bodyContent,
+    cookies = [],
+    users = 10,
+    concurrency = 10,
+    duration = 0, // 0 = run `users` requests; otherwise run for `duration` seconds
+  } = req.body;
+
+  if (!url) {
+    return res.status(400).json({ error: 'URL is required' });
+  }
+
+  let parsedAuthConfig: any = {};
+  try {
+    parsedAuthConfig = typeof authConfig === 'string' ? JSON.parse(authConfig) : authConfig;
+  } catch (e) {}
+
+  // Build the request headers once
+  const requestHeaders: Record<string, string> = arrayToRecord(headers);
+  if (authType === 'bearer' && parsedAuthConfig.token) {
+    requestHeaders['Authorization'] = `Bearer ${parsedAuthConfig.token}`;
+  } else if (authType === 'basic' && (parsedAuthConfig.username || parsedAuthConfig.password)) {
+    const creds = Buffer.from(`${parsedAuthConfig.username || ''}:${parsedAuthConfig.password || ''}`).toString('base64');
+    requestHeaders['Authorization'] = `Basic ${creds}`;
+  } else if (authType === 'apikey' && parsedAuthConfig.key) {
+    if (parsedAuthConfig.addTo === 'headers') requestHeaders[parsedAuthConfig.key] = parsedAuthConfig.value || '';
+  }
+
+  const cookieRecord = arrayToRecord(cookies);
+  const cookieString = Object.entries(cookieRecord).map(([k, v]) => `${k}=${v}`).join('; ');
+  if (cookieString) requestHeaders['Cookie'] = cookieString;
+
+  // Prepare body once
+  let data: any = undefined;
+  if (bodyType !== 'none' && bodyContent) {
+    if (bodyType === 'json') {
+      try { data = JSON.parse(bodyContent); } catch { data = bodyContent; }
+    } else if (bodyType === 'urlencoded') {
+      const rec = typeof bodyContent === 'string' ? JSON.parse(bodyContent) : bodyContent;
+      const sp = new URLSearchParams();
+      if (Array.isArray(rec)) for (const it of rec) if (it.enabled !== false && it.key) sp.append(it.key, it.value || '');
+      else for (const [k, v] of Object.entries(rec || {})) sp.append(k, String(v));
+      data = sp.toString();
+      requestHeaders['Content-Type'] = 'application/x-www-form-urlencoded';
+    } else if (bodyType === 'formdata') {
+      const items = typeof bodyContent === 'string' ? JSON.parse(bodyContent) : bodyContent;
+      const fd: Record<string, any> = {};
+      if (Array.isArray(items)) for (const it of items) if (it.enabled !== false && it.key) fd[it.key] = it.value || '';
+      data = fd;
+    } else if (bodyType === 'text') {
+      data = bodyContent;
+      if (!requestHeaders['Content-Type']) requestHeaders['Content-Type'] = 'text/plain';
+    } else if (bodyType === 'xml') {
+      data = bodyContent;
+      if (!requestHeaders['Content-Type']) requestHeaders['Content-Type'] = 'application/xml';
+    }
+  }
+
+  const requestParams: Record<string, string> = arrayToRecord(params);
+  if (authType === 'apikey' && parsedAuthConfig.key && parsedAuthConfig.addTo === 'params') {
+    requestParams[parsedAuthConfig.key] = parsedAuthConfig.value || '';
+  }
+
+  const timeout = 30000;
+  const baseConfig = () => ({
+    method: method as Method,
+    url,
+    headers: { ...requestHeaders },
+    params: { ...requestParams },
+    data: bodyType === 'formdata' && data ? { ...data } : data,
+    timeout,
+    validateStatus: () => true,
+    responseType: 'text' as const,
+  });
+
+  const safeUsers = Math.max(1, Math.min(Number(users) || 1, 1000));
+  const safeConcurrency = Math.max(1, Math.min(Number(concurrency) || safeUsers, 200));
+
+  const runOne = async (): Promise<{ duration: number; status: number; error: boolean }> => {
+    const start = Date.now();
+    try {
+      const resp = await axios(baseConfig());
+      return { duration: Date.now() - start, status: resp.status, error: false };
+    } catch (e: any) {
+      return { duration: Date.now() - start, status: e.response?.status || 0, error: true };
+    }
+  };
+
+  const results: { duration: number; status: number; error: boolean }[] = [];
+  let completed = 0;
+  let nextIndex = 0;
+
+  const worker = async () => {
+    while (nextIndex < safeUsers) {
+      const idx = nextIndex++;
+      const r = await runOne();
+      results[idx] = r;
+      completed++;
+    }
+  };
+
+  const testStart = Date.now();
+  const workers = Array.from({ length: Math.min(safeConcurrency, safeUsers) }, () => worker());
+  await Promise.all(workers);
+  const totalTime = Date.now() - testStart;
+  const totalSeconds = totalTime / 1000;
+
+  const durations = results.map(r => r.duration);
+  const successCount = results.filter(r => !r.error && r.status >= 200 && r.status < 300).length;
+  const errorCount = results.filter(r => r.error || r.status >= 400).length;
+  const avg = durations.length ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
+  const min = durations.length ? Math.min(...durations) : 0;
+  const max = durations.length ? Math.max(...durations) : 0;
+  const p95 = durations.length ? [...durations].sort((a, b) => a - b)[Math.floor(durations.length * 0.95)] : 0;
+
+  const statusCodes: Record<number, number> = {};
+  results.forEach(r => { statusCodes[r.status] = (statusCodes[r.status] || 0) + 1; });
+
+  return res.json({
+    summary: {
+      totalRequests: safeUsers,
+      concurrency: Math.min(safeConcurrency, safeUsers),
+      totalTimeMs: totalTime,
+      requestsPerSecond: totalSeconds > 0 ? Number((safeUsers / totalSeconds).toFixed(2)) : safeUsers,
+      success: successCount,
+      errors: errorCount,
+      avgMs: Number(avg.toFixed(2)),
+      minMs: min,
+      maxMs: max,
+      p95Ms: p95,
+    },
+    statusCodes,
+  });
 });

@@ -44,9 +44,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenEnvironm
     history,
     deleteHistoryItem,
     clearHistory,
-    updateHistoryItem,
+updateHistoryItem,
     addTab,
-    openRunner
+    openRunner,
+    showToast
   } = useStore();
 
   const [activeTab, setActiveTab] = useState<'collections' | 'history'>('collections');
@@ -179,8 +180,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenEnvironm
       fileReader.onload = async (event) => {
         try {
           const imported = JSON.parse(event.target?.result as string);
-          if (!imported.name) {
-            alert("Invalid collection format. Must contain a 'name'.");
+if (!imported.name) {
+            showToast("Invalid collection format. Must contain a 'name'.", 'error');
             return;
           }
           
@@ -206,9 +207,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onOpenSettings, onOpenEnvironm
               });
             }
           }
-          alert("Collection imported successfully!");
+showToast("Collection imported successfully!", 'success');
         } catch (err) {
-          alert("Failed to parse JSON file.");
+          showToast("Failed to parse JSON file.", 'error');
         }
       };
     }

@@ -13,6 +13,7 @@ import { DocsModal } from './components/DocsModal';
 import { ExamplesPage } from './components/ExamplesPage';
 import { FloatingNav } from './components/FloatingNav';
 import { Footer } from './components/Footer';
+import { Toast } from './components/Toast';
 
 const App: React.FC = () => {
   const {
@@ -22,7 +23,7 @@ const App: React.FC = () => {
     tabs,
     activeTabId,
     sendRequest,
-    updateSettings
+    showToast
   } = useStore();
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -71,7 +72,7 @@ const App: React.FC = () => {
             cookies: JSON.stringify(activeTab.cookies),
             settings: JSON.stringify(activeTab.settings)
           });
-          alert('Request Saved!');
+          showToast('Request saved successfully!', 'success');
         }
       }
 
@@ -164,6 +165,7 @@ const App: React.FC = () => {
         onCreateCollection={handleCreateCollectionFromDashboard}
         onOpenExamples={() => setIsExamplesOpen(true)}
       />
+      <Toast />
       <Footer />
     </div>
   );
