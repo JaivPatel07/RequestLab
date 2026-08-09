@@ -163,7 +163,7 @@ export const LoadTestModal: React.FC = () => {
                   <div className="text-2xl font-bold text-rose-400">{summary.p95Ms} ms</div>
                   <div className="text-[10px] text-slate-400 mt-0.5">P95 latency</div>
                 </div>
-                <div className="bg-slate-900/40 border border-slate-800 rounded-lg p-3 text-center col-span-1">
+                <div className="bg-slate-900/40 border border-slate-800 rounded-lg p-3 text-center">
                   <div className="flex items-center justify-center gap-1 text-lg">
                     <CheckCircle size={16} className="text-emerald-400" />
                     <span className="font-bold text-emerald-400">{summary.success}</span>
@@ -206,5 +206,3 @@ export const LoadTestModal: React.FC = () => {
     </div>
   );
 };
-</content>
-

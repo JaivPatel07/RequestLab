@@ -11,6 +11,7 @@ import { CommandPalette } from './components/CommandPalette';
 import { CollectionRunnerModal } from './components/CollectionRunnerModal';
 import { DocsModal } from './components/DocsModal';
 import { ExamplesPage } from './components/ExamplesPage';
+import { LoadTestModal } from './components/LoadTestModal';
 import { FloatingNav } from './components/FloatingNav';
 import { Footer } from './components/Footer';
 import { Toast } from './components/Toast';
@@ -99,11 +100,12 @@ const App: React.FC = () => {
       <PanelGroup direction="horizontal" className="h-full w-full">
         {/* Left panel: Sidebar */}
         <Panel defaultSize={20} minSize={15} maxSize={35}>
-          <Sidebar
+<Sidebar
             onOpenSettings={() => setIsSettingsOpen(true)}
             onOpenEnvironments={() => setIsEnvironmentsOpen(true)}
             onOpenDocs={() => setIsDocsOpen(true)}
             onOpenExamples={() => setIsExamplesOpen(true)}
+            onOpenLoadTest={() => useStore.getState().openLoadTest()}
           />
         </Panel>
 
@@ -141,9 +143,10 @@ const App: React.FC = () => {
       {/* Modals & Dialogs */}
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       <EnvironmentModal isOpen={isEnvironmentsOpen} onClose={() => setIsEnvironmentsOpen(false)} />
-      <DocsModal isOpen={isDocsOpen} onClose={() => setIsDocsOpen(false)} />
+<DocsModal isOpen={isDocsOpen} onClose={() => setIsDocsOpen(false)} />
       <CollectionRunnerModal />
-      <CommandPalette
+      <LoadTestModal />
+<CommandPalette
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
         onOpenSettings={() => {
@@ -158,12 +161,17 @@ const App: React.FC = () => {
           setIsCommandPaletteOpen(false);
           setIsExamplesOpen(true);
         }}
+        onOpenLoadTest={() => {
+          setIsCommandPaletteOpen(false);
+          useStore.getState().openLoadTest();
+        }}
       />
-      <FloatingNav
+<FloatingNav
         onOpenDocs={() => setIsDocsOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onCreateCollection={handleCreateCollectionFromDashboard}
         onOpenExamples={() => setIsExamplesOpen(true)}
+        onOpenLoadTest={() => useStore.getState().openLoadTest()}
       />
       <Toast />
       <Footer />

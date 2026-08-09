@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
-import { Search, Terminal, Moon, Sun, Monitor, Trash2, Plus, Settings, Folder, FlaskConical } from 'lucide-react';
+import { Search, Terminal, Moon, Sun, Monitor, Trash2, Plus, Settings, Folder, FlaskConical, Activity } from 'lucide-react';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -8,6 +8,7 @@ interface CommandPaletteProps {
   onOpenSettings: () => void;
   onCreateCollection: () => void;
   onOpenExamples: () => void;
+  onOpenLoadTest: () => void;
 }
 
 export const CommandPalette: React.FC<CommandPaletteProps> = ({
@@ -15,7 +16,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   onClose,
   onOpenSettings,
   onCreateCollection,
-  onOpenExamples
+  onOpenExamples,
+  onOpenLoadTest
 }) => {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -53,12 +55,19 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       icon: Settings,
       action: onOpenSettings
     },
-    {
+{
       id: 'open-examples',
       name: 'Examples & How to Test',
       category: 'Documentation',
       icon: FlaskConical,
       action: onOpenExamples
+    },
+    {
+      id: 'open-load-test',
+      name: 'Open Load Test',
+      category: 'Testing',
+      icon: Activity,
+      action: onOpenLoadTest
     }
   ];
 
