@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
-import { Search, Terminal, Moon, Sun, Monitor, Trash2, Plus, Settings, Folder, FlaskConical, Activity } from 'lucide-react';
+import { Search, Terminal, Trash2, Plus, Settings, Folder, FlaskConical, Activity } from 'lucide-react';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -24,7 +24,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const { updateSettings, clearHistory, addTab, collections } = useStore();
+const { clearHistory, addTab, collections } = useStore();
 
   const commands = [
     {
